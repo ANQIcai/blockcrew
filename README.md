@@ -1,7 +1,7 @@
 # blockcrew
 
-**Blocky voxel avatars for a fleet of AI agents — one per role, built as a
-matching set.**
+**Blocky voxel character avatars for a fleet of AI agents — one little person
+per role, built as a matching set.**
 
 An Agent Skill. Point it at your agents, get back a crew that looks like a
 family and never gets confused in a sidebar.
@@ -40,20 +40,26 @@ came from six different projects.
 
 ## What it produces
 
-One square image per agent. Flat colour, hard 90° edges, cube head, one
-oversized prop that names the job.
+One square image per agent: a blocky humanoid figure — cube head, prism torso,
+straight limbs, two square eyes. Flat colour, hard 90° edges, no curves.
 
-| Role | Prop | Hue |
-|---|---|---|
-| Career / job search | briefcase | indigo |
-| Trading / investment | candlestick bar | teal |
-| Admin / butler | serving tray | warm grey |
-| Building / engineering | hard hat | amber |
-| Content / filming | boxy camera | magenta |
-| Marketing | megaphone | cyan |
+Each one names its job three ways: **headwear, outfit block, and one oversized
+prop.**
 
-Starting points, not a closed list. A role with no obvious object gets an
-abstract one rather than a vague one.
+| Role | Headwear | Prop | Hue |
+|---|---|---|---|
+| Career / job search | neat side-part | briefcase | indigo |
+| Trading / investment | headset | candlestick bar | teal |
+| Admin / butler | slicked flat hair | serving tray | warm grey |
+| Building / engineering | hard hat | wrench | amber |
+| Content / filming | backwards cap | boxy camera | magenta |
+| Marketing | beret | megaphone | cyan |
+
+Starting points, not a closed list.
+
+🔴 **Headwear matters more than the prop.** At 32px the prop becomes a smudge
+and the outline of the head is still legible — so where two roles hold similar
+tools, the hat is what separates them.
 
 ---
 

@@ -1,13 +1,13 @@
 ---
 name: blockcrew
-description: Generate a matching set of blocky voxel avatars for a fleet of AI agents, one per role, built so the whole crew reads as siblings while every member stays instantly distinguishable at sidebar size. Use when creating avatars, profile pictures, or identity art for multiple agents, bots, team members, or services that appear together in a list.
+description: Generate a matching set of blocky voxel character avatars for a fleet of AI agents — one little person per role, built so the whole crew reads as siblings while every member stays instantly distinguishable at sidebar size. Use when creating avatars, profile pictures, or identity art for multiple agents, bots, team members, or services that appear together in a list.
 ---
 
 # Blockcrew
 
 Give a fleet of agents faces. Not one mascot — a **crew**: a set of blocky
-voxel characters that obviously belong together and are never mistaken for
-each other.
+voxel *people* who obviously work at the same place and are never mistaken
+for each other.
 
 ## The problem this solves
 
@@ -53,26 +53,41 @@ identical.** Every rule below exists to hold both.
    path, and dimensions. Do not silently discard, retry, or post-process a
    candidate. If one is weak, say so and offer a redraw.
 
-## Shape language
+## Shape language — the figure is a PERSON
+
+🔴 **Every avatar is a blocky humanoid character, not an object, animal, or
+abstract mascot.** A viewer should read it as *a little person who does this
+job*, in the same instant they read the role.
 
 - **Hard 90° edges only.** Flat faces, square corners, no bevels, no rounded
-  contours, no curves anywhere — not on the head, not on a prop, not on a
-  hand. A single curve breaks the voxel read.
-- **Head is a cube and dominates**: 45–55% of total figure height. This is what
-  makes the set cute rather than architectural.
-- **Body is a rectangular prism**, narrower than the head. Limbs are plain
-  rectangular prisms with blunt square ends.
-- **Face: two square eyes, optionally one square or rectangular mouth.** No
-  eyebrows, pupils, nostrils, blush, highlights, or outlines.
+  contours, no curves anywhere — not on the head, not on a limb, not on a
+  prop. A single curve breaks the voxel read.
+- **Anatomy, all rectangular prisms:** one cube head, one rectangular torso,
+  two arms, two legs. Blunt square ends. No hands or feet as separate shapes —
+  the limb simply ends.
+- **Proportions:** head is **30–40% of total figure height** — larger than a
+  real person, smaller than a chibi mascot. Torso roughly the same width as
+  the head; arms narrower and hanging at the sides or holding the prop; legs
+  short and straight.
+- **The head reads as a face, not a box.** Two square eyes on the front face,
+  optionally one small rectangular mouth. A separate flat colour block across
+  the top of the head for hair. No eyebrows, pupils, nostrils, blush,
+  highlights, or outlines.
+- **Standing upright, facing the viewer.** Symmetrical, neutral stance. No
+  action poses, no walking, no dynamic angles.
 - **Visible chunk size stays constant across the crew.** If one avatar is built
   from visibly finer blocks than another, they stop looking like the same
   species.
 - **One view angle for the entire crew** — either flat front-facing or a
   consistent 3/4 isometric. Never mix within a set.
-- Figure fills **80–90% of the canvas**, centred, standing upright, with even
-  margins. ⚠️ Unlike single-mascot work, a crew must be **centred and
-  consistently scaled** — corner-anchored compositions look broken when tiled
-  in a list.
+- Figure fills **80–90% of the canvas**, centred, with even margins. Framing
+  is either full-body or head-and-torso, but ⚠️ **the same choice for every
+  member** — a crew that mixes crops looks like unrelated files.
+
+⭐ **A person carries a role better than a symbol does.** An icon of a
+briefcase says "career"; a small blocky person *holding* a briefcase says
+"this is the agent who handles my career". The second is what an avatar is
+for — it stands in for someone.
 
 ## Colour
 
@@ -80,8 +95,8 @@ Exactly **three semantic colours per avatar**:
 
 | Slot | Rule |
 |---|---|
-| Shared neutral | **Identical across the whole crew.** Body and limbs. This is the family resemblance |
-| Role hue | One per agent, high chroma, unique within the crew. Used on the prop and exactly one body region |
+| Shared neutral | **Identical across the whole crew.** Skin tone, limbs, and any unpainted body area. This is the family resemblance |
+| Role hue | One per agent, high chroma, unique within the crew. Used on the prop and the outfit block — the two things that name the job |
 | Background | One flat colour, or transparent. Same choice for every member |
 
 - Pick role hues **far apart on the wheel**, not neighbouring shades.
@@ -90,33 +105,46 @@ Exactly **three semantic colours per avatar**:
 - No gradients, no shadows, no ambient occlusion, no texture noise. Flat fills
   only — shading defeats the point of the form.
 
-## The one prop rule
+## Naming the role: outfit, headwear, one prop
 
-Each agent carries **exactly one** object that names its job. Not two.
+A person carries a job three ways. Use **all three**, and keep each one simple.
 
-- The prop must be **blocky, chunky, and oversized** — roughly a third of the
-  figure's height. A realistic-scale prop vanishes at avatar size.
-- It sits **on the head or held at chest height**, never as a small detail on
-  clothing.
-- It must be readable **as a pure black silhouette**. If identifying it
-  requires colour, it is the wrong prop.
+**1. Outfit — a flat colour block on the torso.** Not a rendered garment: one
+or two rectangular colour regions reading as a uniform. A collar line, a
+lapel, an apron, a hi-vis band. Nothing smaller than a visible chunk.
+
+**2. Headwear or hair — the fastest role signal at small size.** A hard hat, a
+cap, a headset, a visor, a particular hair block colour. 📌 This is what stays
+legible when the figure is 32px tall and the prop has become a smudge.
+
+**3. Exactly ONE held prop.** Not two.
+
+- Blocky, chunky and **oversized** — roughly a third of the figure's height.
+  A realistic-scale prop vanishes at avatar size.
+- Held at chest height in one or both hands, or resting on a shoulder.
+- Readable **as a pure black silhouette**. If identifying it needs colour, it
+  is the wrong prop.
 
 Worked examples, tested for silhouette separation:
 
-| Role | Prop | Suggested hue |
-|---|---|---|
-| Career / job search | briefcase | indigo |
-| Trading / investment | blocky candlestick bar | teal |
-| Admin / butler | serving tray | warm grey |
-| Building / engineering | hard hat | amber |
-| Content / filming | boxy camera held up | magenta |
-| Marketing | megaphone | cyan |
-| Research | magnifying glass, square lens | violet |
-| Ops / infrastructure | wrench | slate blue |
+| Role | Headwear / hair | Outfit | Prop | Hue |
+|---|---|---|---|---|
+| Career / job search | neat side-part block | collared shirt + tie | briefcase | indigo |
+| Trading / investment | headset | open collar | candlestick bar | teal |
+| Admin / butler | slicked flat hair | waistcoat with lapels | serving tray | warm grey |
+| Building / engineering | **hard hat** | hi-vis band across chest | wrench | amber |
+| Content / filming | **backwards cap** | plain tee | boxy camera held up | magenta |
+| Marketing | **beret** | bold-panel top | megaphone | cyan |
+| Research | round flat-top hair | lab-coat lapels | square-lens magnifier | violet |
+| Ops / infrastructure | **beanie** | zip-up panel | toolbox | slate blue |
+
+🔴 **Where two roles share a prop shape, the headwear must differ sharply.**
+Engineer and ops both hold tools; the hard hat versus the beanie is what
+separates them at 32px, not the tool.
 
 📌 These are starting points, not a closed list. A role with no obvious object
 gets an abstract one — a stacked block tower, a floating cube — rather than a
-vague or generic gesture.
+vague gesture or empty hands.
 
 ## 🔴 The silhouette test
 
@@ -126,8 +154,9 @@ at 32×32.**
 - If any two are confusable, **change the silhouette, not the colour.** Colour
   identifies fastest; silhouette identifies reliably. Silhouette is what
   survives greyscale, dark mode, colourblindness, and a compressed thumbnail.
-- The fix is a different prop shape or a different head-mounted element —
-  never a darker shade of the same hue.
+- The fix is a different **headwear** shape or a different prop silhouette —
+  never a darker shade of the same hue. Headwear changes the outline of the
+  head, which is the largest and most visible part of a blocky person.
 - Report the outcome plainly, including which pairs were closest. ⚠️ A test
   whose result is never reported is indistinguishable from a test that never
   ran.
@@ -175,6 +204,14 @@ the one colour holding the set together.
 
 **Do not centre-crop differently per avatar.** Inconsistent framing is the
 fastest way to make a coherent set look like a collection of unrelated files.
+
+**Do not render a realistic human.** The figure is built from six or seven
+rectangular prisms. Fingers, facial contours, fabric folds, and shaded muscle
+all break the style and none of them survive to 32px.
+
+**Do not leave the hands empty.** A blocky person with no prop, no headwear
+and no outfit block is a generic figure — it identifies nobody, and a crew of
+those is six copies of the same avatar in different colours.
 
 **Do not soften the geometry** because a shape looks harsh. Harshness is the
 style. A rounded voxel is just a blurry sphere.
