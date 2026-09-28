@@ -24,7 +24,8 @@ identical.** Every rule below exists to hold both.
 
 ## Workflow
 
-1. **Read the roster before asking for it.** If the workspace is an agent
+1. **Read THIS user's roster before asking for it.** 🔴 The crew is whatever
+   agents *they* run — never a default set. If the workspace is an agent
    project, look for agent definitions, profile directories, config files, or
    a README that names the agents and their jobs. Infer the roster from
    evidence when the roles and their purposes are clear.
@@ -34,7 +35,7 @@ identical.** Every rule below exists to hold both.
 3. **Propose the crew map before generating anything.** One row per agent:
 
    ```
-   <agent> — <role in three words> — <prop> — <role hue>
+   <agent> — <role in three words> — <headwear> — <outfit> — <prop> — <hue>
    ```
 
    State the shared neutral and the shared view angle once, above the table.
@@ -142,9 +143,37 @@ Worked examples, tested for silhouette separation:
 Engineer and ops both hold tools; the hard hat versus the beanie is what
 separates them at 32px, not the tool.
 
-📌 These are starting points, not a closed list. A role with no obvious object
-gets an abstract one — a stacked block tower, a floating cube — rather than a
-vague gesture or empty hands.
+⚠️ **This table is a worked example, not the product.** These eight roles are
+common ones, shown to demonstrate the spacing of silhouettes and hues. Most
+fleets will contain roles that are not here — a support agent, a legal agent,
+a scheduling agent, a game-master, a household bot. **Derive their kit; do not
+force them into a row above.**
+
+## Deriving a kit for a role not in the table
+
+For each role the user actually has, answer three questions in order:
+
+1. **What does this role physically carry or touch?** Take the most
+   object-like answer and make it blocky and oversized. A legal agent holds a
+   gavel or a stamped document; a support agent holds a headset or a ticket
+   card; a scheduling agent holds a calendar block.
+2. **What would this person wear on their head?** Pick the most
+   role-specific option available: a uniform cap, a visor, a headset, a
+   particular hair shape. 🔴 **Check it against every headwear already
+   assigned in this crew** — this is the separator that survives to 32px.
+3. **What one colour block says the uniform?** A collar, an apron, a sash, a
+   panel. One or two rectangles, nothing finer than a visible chunk.
+
+**If a role is purely abstract** — "memory", "router", "orchestrator" — give
+the figure an abstract prop rather than a vague gesture: a stacked block
+tower, a floating cube, a key, a clipboard of stacked bars. ⚠️ Never leave the
+hands empty and never fall back to a generic office worker; an unidentifiable
+member defeats the point of a crew.
+
+**If two roles genuinely overlap** — "backend" and "infra", "research" and
+"analysis" — separate them on **headwear first, prop second, hue last**. If
+they still collide, ask the user which distinction matters to them rather
+than guessing.
 
 ## 🔴 The silhouette test
 
@@ -208,6 +237,11 @@ fastest way to make a coherent set look like a collection of unrelated files.
 **Do not render a realistic human.** The figure is built from six or seven
 rectangular prisms. Fingers, facial contours, fabric folds, and shaded muscle
 all break the style and none of them survive to 32px.
+
+**Do not generate the example roster.** The eight roles in the table are a
+demonstration of silhouette spacing. Generating career/trading/admin for a user
+who runs support/legal/scheduling is the single worst failure this skill can
+produce — a crew of avatars for agents that do not exist.
 
 **Do not leave the hands empty.** A blocky person with no prop, no headwear
 and no outfit block is a generic figure — it identifies nobody, and a crew of

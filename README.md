@@ -55,7 +55,10 @@ prop.**
 | Content / filming | backwards cap | boxy camera | magenta |
 | Marketing | beret | megaphone | cyan |
 
-Starting points, not a closed list.
+⚠️ **That table is an example, not the menu.** Your fleet is whatever agents
+*you* run — support, legal, scheduling, a game master, a household bot. The
+skill derives a kit for each of your roles from three questions: what does this
+person carry, what do they wear on their head, what colour says the uniform.
 
 🔴 **Headwear matters more than the prop.** At 32px the prop becomes a smudge
 and the outline of the head is still legible — so where two roles hold similar
