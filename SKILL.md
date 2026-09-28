@@ -1,6 +1,6 @@
 ---
 name: blockcrew
-description: Generate a matching set of blocky voxel character avatars for a fleet of AI agents — one little person per role, built so the whole crew reads as siblings while every member stays instantly distinguishable at sidebar size. Use when creating avatars, profile pictures, or identity art for multiple agents, bots, team members, or services that appear together in a list.
+description: Generate a matching set of blocky, low-resolution pixel-art voxel character avatars for a fleet of AI agents — one little person per role, built so the whole crew reads as siblings while every member stays instantly distinguishable at sidebar size. Use when creating avatars, profile pictures, or identity art for multiple agents, bots, team members, or services that appear together in a list.
 ---
 
 # Blockcrew
@@ -92,7 +92,8 @@ for — it stands in for someone.
 
 ## Colour
 
-Exactly **three semantic colours per avatar**:
+Exactly **three semantic colours per avatar** — semantic, meaning three
+*materials*, each rendered as two to four quantised shades on the texel grid:
 
 | Slot | Rule |
 |---|---|
@@ -103,8 +104,8 @@ Exactly **three semantic colours per avatar**:
 - Pick role hues **far apart on the wheel**, not neighbouring shades.
 - 🔴 **Never rely on red-versus-green to separate two agents.** Roughly 1 in 12
   men cannot distinguish them; a fleet sidebar is exactly where that fails.
-- No gradients, no shadows, no ambient occlusion, no texture noise. Flat fills
-  only — shading defeats the point of the form.
+- No smooth gradients, no soft shadows, no ambient occlusion, no glow. Any
+  shading is **quantised**, not blended — see the texel grid below.
 
 ## Naming the role: outfit, headwear, one prop
 
@@ -175,6 +176,49 @@ member defeats the point of a crew.
 they still collide, ask the user which distinction matters to them rather
 than guessing.
 
+## Resolution and surface — the pixelated read
+
+🔴 **Blocky geometry alone is not enough.** A cube-headed figure rendered with
+smooth, perfectly flat surfaces looks like a modern low-poly toy, not a
+low-resolution character. The pixelated quality comes from the **surface**, not
+only the shape.
+
+Three things produce it, and all three are required:
+
+**1. A visible texel grid.** Every surface is divided into large square texels
+— roughly **8–16 across the width of the head**, held consistent across the
+whole figure and the whole crew. The texels must be individually visible at
+full size. If a surface reads as one unbroken colour field, the resolution is
+too high.
+
+**2. Quantised variation within each colour region.** Adjacent texels of the
+same material differ by small steps in brightness — two to four discrete
+shades of the role hue, assigned per texel, never blended. This is what makes
+a surface read as *material* rather than as vector fill.
+
+⚠️ **This is not noise and not texture detail.** It is a handful of flat
+values snapped to the texel grid. No grain, no speckle, no photographic
+texture, no per-pixel randomness.
+
+**3. Hard pixel edges — nearest-neighbour, never anti-aliased.** Every boundary
+between colours is a stepped square edge. No feathering, no soft transitions,
+no smoothed diagonals. A diagonal is a visible staircase of squares.
+
+⭐ **Low resolution is a design constraint being displayed, not a defect being
+hidden.** The staircase edge is the whole aesthetic — smoothing it produces a
+cleaner image that has lost the point.
+
+**Say it in the prompt explicitly.** Image models default to smooth, polished
+output, so the words that matter are: *low-resolution texel grid, visible
+square pixels, nearest-neighbour edges, no anti-aliasing, no gradients,
+quantised flat shading*. Omitting them yields a glossy 3D render of a blocky
+character — geometrically correct and stylistically wrong.
+
+⚠️ **Render at high pixel dimensions with a low apparent resolution.** The file
+is 1024×1024 or larger; the *apparent* grid is coarse. Do not generate a small
+image and upscale it — that softens the edges, which destroys the only quality
+this section exists to produce.
+
 ## 🔴 The silhouette test
 
 **Before delivering, mentally render every crew member as a flat black shape
@@ -233,6 +277,11 @@ the one colour holding the set together.
 
 **Do not centre-crop differently per avatar.** Inconsistent framing is the
 fastest way to make a coherent set look like a collection of unrelated files.
+
+**Do not accept a smooth render.** The most common failure is a glossy 3D
+model of a blocky character: correct geometry, soft lighting, anti-aliased
+edges, no visible texels. It looks competent and it is the wrong style. Check
+for a visible square grid before delivering.
 
 **Do not render a realistic human.** The figure is built from six or seven
 rectangular prisms. Fingers, facial contours, fabric folds, and shaded muscle

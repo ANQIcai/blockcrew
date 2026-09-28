@@ -41,7 +41,12 @@ came from six different projects.
 ## What it produces
 
 One square image per agent: a blocky humanoid figure — cube head, prism torso,
-straight limbs, two square eyes. Flat colour, hard 90° edges, no curves.
+straight limbs, two square eyes. Hard 90° edges, no curves.
+
+**Low-resolution on purpose.** A visible texel grid of roughly 8–16 squares
+across the head, two to four quantised shades per material, and hard
+nearest-neighbour edges. No anti-aliasing, no gradients, no gloss — a diagonal
+is a visible staircase of squares.
 
 Each one names its job three ways: **headwear, outfit block, and one oversized
 prop.**
