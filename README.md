@@ -14,6 +14,22 @@ Then ask your agent:
 
 > give my agents avatars with blockcrew
 
+Or run the renderer directly — no API key, no network, no image model:
+
+```sh
+python3 scripts/render.py --roster my-crew.json --out avatars/
+```
+
+![example crew](assets/example-crew.png)
+
+**Every quantity in this skill is a number** — head 8×8×8, torso 8×12×4, eight
+texels per head face, sixteen hex values, fixed crop, fixed angle. That is a
+rendering problem, not a generation problem, so the default method constructs
+the pixels instead of asking a model to approximate them.
+
+> Consistency stops being something you verify and becomes something you
+> cannot violate.
+
 ---
 
 ## Why a crew, not a mascot

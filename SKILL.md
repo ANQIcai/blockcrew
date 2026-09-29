@@ -22,6 +22,54 @@ at 32–64px. They must answer two questions at once:
 look unrelated. Optimising only for the first produces six that look
 identical.** Every rule below exists to hold both.
 
+## 🔴 Two production methods — prefer the renderer
+
+**Method A — `scripts/render.py` (default).** Constructs the PNGs directly on
+the texel grid. No image model, no API key, no network.
+
+```sh
+python3 scripts/render.py --roster my-crew.json --out avatars/
+python3 scripts/render.py --list          # palette, headwear, props
+```
+
+**Method B — an image model**, using the same spec as a prompt. Only when a
+role needs a prop the sprite library does not have.
+
+### Why the renderer is the default
+
+Every quantity in this spec is a number: head 8×8×8, torso 8×12×4, arms
+4×12×4, eight texels per head face, sixteen hex values, base-plus-shade
+lighting, a fixed crop, a fixed camera angle.
+
+⭐ **That is a rendering problem, not a generation problem.** Asking a
+probabilistic model to land on exact integers is the wrong tool, and it fails
+the way probabilistic tools fail — plausibly, and differently each run.
+
+Everything Method B needs — an invariant block pasted verbatim, a six-point
+consistency check, *"no anti-aliasing"*, *"do not accept a smooth render"* —
+exists **only to fight drift that the renderer cannot produce**. Consistency
+stops being something to verify and becomes something guaranteed.
+
+📌 It also removes the API key. A public skill that runs free and offline is
+usable by everyone; one that needs a paid image model is not.
+
+### The sprite library is the extension point
+
+⚠️ **The renderer can only draw props it has sprites for.** A legal agent
+needs a gavel; a support agent needs a headset. Adding one is a small block of
+text in `scripts/render.py`:
+
+```python
+"gavel": [("......PPPP......", 13), ("......PppP......", 14)],
+```
+
+⭐ **This is better than the prompt it replaces.** A prompt cannot be extended
+by anyone but its author; a sprite table takes pull requests. Ask the user
+whether to add a sprite or fall back to Method B when a role has no match —
+never silently substitute a prop that means something else.
+
+---
+
 ## Workflow
 
 1. **Read THIS user's roster before asking for it.** 🔴 The crew is whatever
@@ -43,10 +91,11 @@ identical.** Every rule below exists to hold both.
    are decisions, and making them once in the open is what stops six
    generations from each deciding differently.
    Wait for approval unless the request already authorises generation.
-4. **Generate one avatar per agent, each as a separate full-resolution square
-   image.** Never ask the model to compose a grid, sheet, or side-by-side
-   comparison — a crew rendered in one image drifts in scale and lighting
-   between members, and the individual files are what the user actually needs.
+4. **Render one avatar per agent.** Write the approved crew map to a roster
+   JSON and run `scripts/render.py`. One square PNG per agent — never a grid
+   or contact sheet; individual files are what the user actually needs.
+   ⚠️ Only fall back to an image model when a role needs a prop the sprite
+   library lacks, and say so rather than substituting a different object.
 5. **Parallelise with subagents when the runtime supports them.** Each subagent
    receives the **invariant block verbatim** plus one agent's row. 🔴 Never
    summarised, never shortened for later members — a paraphrased spec is how
@@ -367,7 +416,11 @@ Image models default to polished output. The words that matter:
 and upscale — that softens edges and destroys the only quality this section
 exists to produce.
 
-## 🔴 The invariant block — how the crew stays consistent
+## 🔴 The invariant block — Method B only
+
+📌 **Skip this entire section when using `render.py`.** Identical geometry,
+palette and lighting are structural there. This exists because independent
+generations drift, which is a property of image models, not of the spec.
 
 Each avatar is a separate generation. **Independent generations drift**: the
 model re-decides camera angle, texel size, lighting and crop height every time

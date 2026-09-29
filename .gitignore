@@ -1,5 +1,4 @@
 out/
-*.png
-!assets/*.png
+avatars/
 .DS_Store
 .env

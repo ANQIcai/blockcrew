@@ -1,0 +1,32 @@
+{
+  "career": {
+    "hue": "blue",
+    "headwear": "side_part",
+    "prop": "briefcase"
+  },
+  "trading": {
+    "hue": "cyan",
+    "headwear": "headset",
+    "prop": "candles"
+  },
+  "admin": {
+    "hue": "purple",
+    "headwear": "flat_hair",
+    "prop": "tray"
+  },
+  "engineer": {
+    "hue": "yellow",
+    "headwear": "hard_hat",
+    "prop": "wrench"
+  },
+  "filmer": {
+    "hue": "magenta",
+    "headwear": "cap_back",
+    "prop": "camera"
+  },
+  "marketing": {
+    "hue": "light_blue",
+    "headwear": "beret",
+    "prop": "megaphone"
+  }
+}
