@@ -40,8 +40,9 @@ came from six different projects.
 
 ## What it produces
 
-One square image per agent: a blocky humanoid figure — cube head, prism torso,
-straight limbs, two square eyes. Hard 90° edges, no curves.
+One square image per agent: a blocky humanoid **bust** — head, torso and arms,
+cropped at the chest like a profile picture. Cube head, prism torso, two square
+eyes. Hard 90° edges, no curves, no legs.
 
 **Low-resolution on purpose.** A visible texel grid of roughly 8–16 squares
 across the head, two to four quantised shades per material, and hard
@@ -73,12 +74,12 @@ tools, the hat is what separates them.
 
 ## The rules that do the work
 
-**Five to seven materials per avatar** — skin, hair, top, base garment, prop,
+**Five to six materials per avatar** — skin, hair, chest, sleeves, prop,
 optional accent. Each rendered in two to four quantised shades on the texel
 grid.
 
 **Coherence comes from the shared slots, not from scarcity.** Skin, background
-and the base garment are identical across the whole crew; everything else
+and the sleeves are identical across the whole crew; everything else
 varies freely. One dominant role hue per agent, with every other per-agent
 colour lower in saturation so the hue still reads.
 

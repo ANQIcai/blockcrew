@@ -1,6 +1,6 @@
 ---
 name: blockcrew
-description: Generate a matching set of blocky, low-resolution pixel-art voxel character avatars for a fleet of AI agents — one little person per role, built so the whole crew reads as siblings while every member stays instantly distinguishable at sidebar size. Use when creating avatars, profile pictures, or identity art for multiple agents, bots, team members, or services that appear together in a list.
+description: Generate a matching set of blocky, low-resolution pixel-art voxel character avatars for a fleet of AI agents — one upper-body bust per role, built so the whole crew reads as siblings while every member stays instantly distinguishable at sidebar size. Use when creating avatars, profile pictures, or identity art for multiple agents, bots, team members, or services that appear together in a list.
 ---
 
 # Blockcrew
@@ -63,27 +63,32 @@ job*, in the same instant they read the role.
 - **Hard 90° edges only.** Flat faces, square corners, no bevels, no rounded
   contours, no curves anywhere — not on the head, not on a limb, not on a
   prop. A single curve breaks the voxel read.
+- 🔴 **Upper body only.** Head, torso and arms. **No legs, no hips, no feet.**
+  The figure is cropped at roughly chest-to-waist height — a bust, like a
+  profile picture, not a full character standing on the ground.
 - **Anatomy, all rectangular prisms:** one cube head, one rectangular torso,
-  two arms, two legs. Blunt square ends. No hands or feet as separate shapes —
-  the limb simply ends.
-- **Proportions:** head is **30–40% of total figure height** — larger than a
-  real person, smaller than a chibi mascot. Torso roughly the same width as
-  the head; arms narrower and hanging at the sides or holding the prop; legs
-  short and straight.
+  two arms. Blunt square ends. No hands or feet as separate shapes — the arm
+  simply ends.
+- **Proportions:** head is **40–50% of the visible figure** — it dominates,
+  because at avatar size the head is what identifies. Torso roughly the same
+  width as the head; arms narrower, angled slightly inward or holding the prop.
+- **The crop is the same for every member:** the bottom edge cuts the torso at
+  the same height across the crew. ⚠️ One member cropped at the shoulders and
+  another at the waist reads as two different sets.
 - **The head reads as a face, not a box.** Two square eyes on the front face,
   optionally one small rectangular mouth. A separate flat colour block across
   the top of the head for hair. No eyebrows, pupils, nostrils, blush,
   highlights, or outlines.
-- **Standing upright, facing the viewer.** Symmetrical, neutral stance. No
-  action poses, no walking, no dynamic angles.
+- **Upright and facing the viewer.** Squared shoulders, symmetrical, neutral.
+  No action poses, no leaning, no dynamic angles.
 - **Visible chunk size stays constant across the crew.** If one avatar is built
   from visibly finer blocks than another, they stop looking like the same
   species.
 - **One view angle for the entire crew** — either flat front-facing or a
   consistent 3/4 isometric. Never mix within a set.
-- Figure fills **80–90% of the canvas**, centred, with even margins. Framing
-  is either full-body or head-and-torso, but ⚠️ **the same choice for every
-  member** — a crew that mixes crops looks like unrelated files.
+- Bust fills **80–90% of the canvas width**, centred horizontally, head near
+  the top with a small even margin. The torso runs off the bottom edge — do
+  not float the bust in the middle with empty space beneath it.
 
 ⭐ **A person carries a role better than a symbol does.** An icon of a
 briefcase says "career"; a small blocky person *holding* a briefcase says
@@ -92,8 +97,8 @@ for — it stands in for someone.
 
 ## Colour — a fuller palette, held together by what is shared
 
-Each avatar carries **five to seven materials**. A three-colour figure was too
-sparse to read as a person: skin, hair, top, trousers and shoes are five
+Each avatar carries **five to six materials**. A three-colour figure was too
+sparse to read as a person: skin, hair, sleeves and a collar are four
 different things before the job is even named.
 
 🔴 **The crew coheres through the SHARED slots, not through scarcity.** Three
@@ -104,11 +109,11 @@ resemblance. The rest are free to vary, and should.
 |---|---|---|
 | Skin | **shared** | One tone for the whole crew, or match the user's own if they ask |
 | Background | **shared** | One flat colour, or transparent — same choice for every member |
-| Base garment | **shared** | Trousers/lower body. The quiet neutral that ties the set together |
+| Sleeves / base layer | **shared** | The arms' garment. The quiet neutral that ties the set together, and the only large shared area left once the legs are gone |
 | Hair | per-agent | Can differ freely; it is also a separator |
-| Top / uniform | per-agent | Carries the role hue |
+| Chest / uniform front | per-agent | The largest per-agent area. Carries the role hue |
 | Prop | per-agent | Role hue, or its own accent |
-| Accent | per-agent, optional | One extra: shoes, belt, collar, lanyard, hatband |
+| Accent | per-agent, optional | One upper-body extra: collar, lanyard, badge, hatband, strap, earpiece |
 
 **Each material gets two to four quantised shades** on the texel grid — a base
 value plus one or two steps darker for the sides facing away from the light.
@@ -150,7 +155,9 @@ legible when the figure is 32px tall and the prop has become a smudge.
 
 - Blocky, chunky and **oversized** — roughly a third of the figure's height.
   A realistic-scale prop vanishes at avatar size.
-- Held at chest height in one or both hands, or resting on a shoulder.
+- 🔴 **Held at chest height or raised, in one or both hands.** With the lower
+  body cropped away, anything held low falls outside the frame — the prop must
+  sit between the chin and the crop line to be visible at all.
 - Readable **as a pure black silhouette**. If identifying it needs colour, it
   is the wrong prop.
 
@@ -158,14 +165,14 @@ Worked examples, tested for silhouette separation:
 
 | Role | Headwear / hair | Top | Prop | Accent | Role hue |
 |---|---|---|---|---|---|
-| Career / job search | neat side-part | collared shirt + tie | briefcase | polished shoes | indigo |
+| Career / job search | neat side-part | collared shirt + tie | briefcase held at chest | pocket square | indigo |
 | Trading / investment | headset | open collar | candlestick bar | lanyard | teal |
-| Admin / butler | slicked flat hair | waistcoat + lapels | serving tray | white gloves | warm grey |
-| Building / engineering | **hard hat** | hi-vis band | wrench | tool belt | amber |
-| Content / filming | **backwards cap** | plain tee | boxy camera | camera strap | magenta |
+| Admin / butler | slicked flat hair | waistcoat + lapels | serving tray held up | bow tie | warm grey |
+| Building / engineering | **hard hat** | hi-vis chest band | wrench raised | chin strap | amber |
+| Content / filming | **backwards cap** | plain tee | boxy camera raised | camera strap | magenta |
 | Marketing | **beret** | bold-panel top | megaphone | scarf | cyan |
 | Research | round flat-top hair | lab-coat lapels | square-lens magnifier | breast-pocket block | violet |
-| Ops / infrastructure | **beanie** | zip-up panel | toolbox | boots | slate blue |
+| Ops / infrastructure | **beanie** | zip-up panel | wrench-and-bolt block | collar zip | slate blue |
 
 🔴 **Where two roles share a prop shape, the headwear must differ sharply.**
 Engineer and ops both hold tools; the hard hat versus the beanie is what
@@ -191,9 +198,10 @@ For each role the user actually has, answer three questions in order:
    assigned in this crew** — this is the separator that survives to 32px.
 3. **What does the top look like?** A collar, an apron, a sash, a panel — one
    or two rectangles carrying the role hue, nothing finer than a visible chunk.
-4. **One optional accent.** Shoes, belt, lanyard, hatband, strap. Lower
-   saturation than the role hue. Skip it if nothing fits; do not invent
-   decoration to fill the slot.
+4. **One optional accent, above the crop line.** Collar, lanyard, badge,
+   hatband, strap, earpiece. Lower saturation than the role hue. Skip it if
+   nothing fits; do not invent decoration to fill the slot. ⚠️ Shoes, belts and
+   trouser details are invisible in a bust — do not assign them.
 
 **If a role is purely abstract** — "memory", "router", "orchestrator" — give
 the figure an abstract prop rather than a vague gesture: a stacked block
@@ -303,8 +311,11 @@ safe to publish and safe to use commercially.
 at small size and destroy the silhouette. Choose a better single prop.
 
 **Do not vary the shared slots to add interest.** Skin, background and the
-base garment are the three things holding the crew together. Varying them is
-how a set becomes a collection.
+sleeves are the three things holding the crew together. Varying them is how a
+set becomes a collection.
+
+📌 With the legs cropped away there is **less shared area than a full-body
+crew has**, so these three slots carry more weight, not less.
 
 **Do not vary the neutral** between crew members to make them distinct. That is
 the one colour holding the set together.
@@ -316,6 +327,9 @@ fastest way to make a coherent set look like a collection of unrelated files.
 model of a blocky character: correct geometry, soft lighting, anti-aliased
 edges, no visible texels. It looks competent and it is the wrong style. Check
 for a visible square grid before delivering.
+
+**Do not draw legs.** The frame is a bust. A figure with legs squeezed in
+shrinks the head, and the head is what identifies the agent at 32px.
 
 **Do not render a realistic human.** The figure is built from six or seven
 rectangular prisms. Fingers, facial contours, fabric folds, and shaded muscle
