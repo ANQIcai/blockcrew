@@ -86,6 +86,16 @@ colour lower in saturation so the hue still reads.
 **Exactly one prop.** Not two. A second prop reads as clutter at avatar size
 and destroys the silhouette.
 
+**One camera angle, pinned.** Straight-on, or turned 10–15° to the viewer's
+right — chosen once for the whole crew, never per avatar. Eyes meet the viewer
+either way.
+
+**An invariant block, pasted verbatim into every generation.** Camera, crop
+height, texel size, light direction, skin, sleeves, background. Independent
+generations drift; identical text is the only thing that stops them.
+
+> Consistency is not a quality to aim for. It is text that must be identical.
+
 **The silhouette test.** Before delivery, every member is checked as a flat
 black shape at 32×32. If two are confusable, the fix is a different
 *silhouette*, never a different shade.

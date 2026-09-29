@@ -38,18 +38,22 @@ identical.** Every rule below exists to hold both.
    <agent> — <role in three words> — <headwear> — <top> — <prop> — <accent> — <hue>
    ```
 
-   State the shared neutral and the shared view angle once, above the table.
+   Above the table, state the **filled-in invariant block** — camera angle,
+   crop height, texel size, light direction, skin, sleeves, background. These
+   are decisions, and making them once in the open is what stops six
+   generations from each deciding differently.
    Wait for approval unless the request already authorises generation.
 4. **Generate one avatar per agent, each as a separate full-resolution square
    image.** Never ask the model to compose a grid, sheet, or side-by-side
    comparison — a crew rendered in one image drifts in scale and lighting
    between members, and the individual files are what the user actually needs.
 5. **Parallelise with subagents when the runtime supports them.** Each subagent
-   receives the identical shared-constraint block plus one agent's row. Shared
-   constraints must be passed verbatim, not summarised — a paraphrased spec is
-   how crews lose coherence.
-6. **Run the silhouette test** (below) before delivering. Report the result
-   honestly, including failures.
+   receives the **invariant block verbatim** plus one agent's row. 🔴 Never
+   summarised, never shortened for later members — a paraphrased spec is how
+   crews lose coherence, and the drift only becomes visible once every image
+   is lined up together.
+6. **Run the consistency check and the silhouette test** (both below) before
+   delivering. Report both results honestly, including failures.
 7. **Deliver every generated result.** Report each agent name, prop, hue, file
    path, and dimensions. Do not silently discard, retry, or post-process a
    candidate. If one is weak, say so and offer a redraw.
@@ -79,13 +83,20 @@ job*, in the same instant they read the role.
   optionally one small rectangular mouth. A separate flat colour block across
   the top of the head for hair. No eyebrows, pupils, nostrils, blush,
   highlights, or outlines.
-- **Upright and facing the viewer.** Squared shoulders, symmetrical, neutral.
-  No action poses, no leaning, no dynamic angles.
+- 🔴 **Camera angle is FIXED, not chosen: straight-on front view, or turned
+  very slightly to the viewer's right (about 10–15°).** Eyes meet the viewer
+  either way. Shoulders stay square to camera even when the head turns.
+- **Upright, neutral, symmetrical.** No action poses, no leaning, no profile
+  views, no three-quarter turns beyond 15°, no looking away or down.
+- ⚠️ **Pick ONE of those two angles for the whole crew and state it in the
+  crew map before generating.** Not "front-facing or 3/4" as a per-avatar
+  decision — one angle, written down, applied to every member.
 - **Visible chunk size stays constant across the crew.** If one avatar is built
   from visibly finer blocks than another, they stop looking like the same
   species.
-- **One view angle for the entire crew** — either flat front-facing or a
-  consistent 3/4 isometric. Never mix within a set.
+- **One view angle for the entire crew**, fixed above. Never mix within a set:
+  a single member at a different angle is the most visible inconsistency
+  possible, more noticeable than a wrong colour.
 - Bust fills **80–90% of the canvas width**, centred horizontally, head near
   the top with a small even margin. The torso runs off the bottom edge — do
   not float the bust in the middle with empty space beneath it.
@@ -257,6 +268,62 @@ is 1024×1024 or larger; the *apparent* grid is coarse. Do not generate a small
 image and upscale it — that softens the edges, which destroys the only quality
 this section exists to produce.
 
+## 🔴 The invariant block — how the crew stays consistent
+
+Each avatar is a separate generation. **Independent generations drift**: the
+model re-decides camera angle, texel size, lighting and crop height every time
+unless the same words appear in every prompt.
+
+⭐ **Consistency is not a quality to aim for, it is text that must be
+identical.** "Keep them consistent" is an instruction to the model; an
+invariant block is a guarantee. Write it once, paste it **verbatim** into every
+single generation, and never paraphrase or shorten it for the later members.
+
+Fill this in before generating anything, then reuse it unchanged:
+
+```
+CREW INVARIANTS — identical in every image
+- Framing: upper-body bust, cropped at <exact chest/waist point>
+- Camera: <straight-on front view | turned 10-15° to viewer's right>
+- Head: cube, 40-50% of visible figure, eyes meeting the viewer
+- Texel grid: <N> squares across the head width
+- Light: from <direction>, <N> quantised shades per material
+- Skin: <colour>
+- Sleeves / base layer: <colour>
+- Background: <colour or transparent>
+- Canvas: <N>×<N> square, bust fills 80-90% of width, centred
+- Style: flat quantised shading, hard nearest-neighbour edges,
+  no anti-aliasing, no gradients, no gloss, no outlines
+```
+
+**Per-avatar, only these change:** hair, chest/uniform, prop, accent, role hue.
+
+⚠️ **When parallelising across subagents, each one receives this block byte for
+byte.** A subagent given a summary produces a sibling that is visibly off, and
+the drift is invisible until all six are lined up.
+
+📌 **The order matters.** Keep the invariants first in the prompt and the
+per-avatar details last, in the same order every time. Prompt position affects
+weighting, so moving the block around between generations reintroduces the
+drift it exists to prevent.
+
+### Check consistency before delivering
+
+Line all outputs up side by side and verify, in this order — each is a failure
+that requires a redraw, not a note:
+
+1. **Same camera angle?** One member turned differently is the most visible
+   error possible.
+2. **Same crop height?** Shoulders on one and waist on another reads as two sets.
+3. **Same texel size?** Finer blocks on one member breaks the species.
+4. **Same light direction?** Shadows on opposite sides look like different art.
+5. **Same skin, sleeves, background?** These are the shared slots; any drift
+   here destroys the family resemblance.
+6. **Same head proportion?** A smaller head on one member reads as a child.
+
+⚠️ **Report every mismatch found, including ones left unfixed.** A consistency
+check whose result is never stated is indistinguishable from one that never ran.
+
 ## 🔴 The silhouette test
 
 **Before delivering, mentally render every crew member as a flat black shape
@@ -327,6 +394,10 @@ fastest way to make a coherent set look like a collection of unrelated files.
 model of a blocky character: correct geometry, soft lighting, anti-aliased
 edges, no visible texels. It looks competent and it is the wrong style. Check
 for a visible square grid before delivering.
+
+**Do not rely on the model remembering the last image.** Each generation is
+independent and will re-decide the camera angle, texel size and crop unless
+the invariant block is in front of it again, word for word.
 
 **Do not draw legs.** The frame is a bust. A figure with legs squeezed in
 shrinks the head, and the head is what identifies the agent at 32px.
