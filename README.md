@@ -83,6 +83,16 @@ tools, the hat is what separates them.
 optional accent. Each rendered in two to four quantised shades on the texel
 grid.
 
+**A locked 16-colour palette.** Every value is a named slot with a hex code —
+greys and browns reserved for the shared slots, eleven high-chroma slots
+available as role hues. Each material uses its base value plus the palette's
+own darker variant for faces turned from the light, so shading is a lookup
+rather than a judgement.
+
+> "Pick hues far apart on the wheel" is vague. "Pick two of sixteen named
+> slots" is checkable — and it removes the commonest source of drift: six
+> generations each inventing a slightly different teal.
+
 **Coherence comes from the shared slots, not from scarcity.** Skin, background
 and the sleeves are identical across the whole crew; everything else
 varies freely. One dominant role hue per agent, with every other per-agent

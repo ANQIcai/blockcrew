@@ -128,19 +128,19 @@ resemblance. The rest are free to vary, and should.
 | Prop | per-agent | Role hue, or its own accent |
 | Accent | per-agent, optional | One upper-body extra: collar, lanyard, badge, hatband, strap, earpiece |
 
-**Each material gets two to four quantised shades** on the texel grid — a base
-value plus one or two steps darker for the sides facing away from the light.
-That is what makes a surface read as material rather than as vector fill, and
-it is why a five-material figure is not a busy one.
+**Each material uses exactly two values from the palette**: its base, and that
+row's shade column for faces turned away from the light. Two flat values, no
+blending, no invented midtones — the palette supplies both, so shading is a
+lookup rather than a judgement.
 
 ### Keeping it from turning into confetti
 
 - **One dominant role hue per agent**, high chroma, unique in the crew. Every
-  other per-agent colour stays **lower in saturation** than it. A figure with
-  four equally loud colours has no role hue at all.
-- **Pick role hues far apart on the wheel**, not neighbouring shades.
-- 🔴 **Never rely on red-versus-green to separate two agents.** Roughly 1 in 12
-  men cannot distinguish them; a fleet sidebar is exactly where that fails.
+  other per-agent colour stays **lower in chroma** than it. A figure with four
+  equally loud colours has no role hue at all.
+- 🔴 **All values come from the locked 16-colour palette below.** Do not invent
+  intermediate tones, and do not tint a palette value to make it fit.
+- 🔴 **Never assign Red and Green as the role hues of two crew members.**
 - Light source is **constant across the crew** — same direction, same strength.
   Shading steps that disagree between members break the set faster than colour
   choices do.
@@ -226,6 +226,72 @@ member defeats the point of a crew.
 "analysis" — separate them on **headwear first, prop second, hue last**. If
 they still collide, ask the user which distinction matters to them rather
 than guessing.
+
+## The locked 16-colour palette
+
+🔴 **Every colour in every avatar comes from this table. No other values.**
+
+These are the classic voxel-game dye values — a fixed, functional 16-colour
+set. Using a locked palette is not decoration: it is the constraint that makes
+a crew cohere without being told to.
+
+| Name | Base | Shade (darker step) |
+|---|---|---|
+| White | `#F9FFFE` | `#E6E6E6` |
+| Light Gray | `#9D9D97` | `#757571` |
+| Gray | `#474F52` | `#353B3D` |
+| Black | `#1D1D21` | `#151518` |
+| Brown | `#835432` | `#623F25` |
+| Red | `#B02E26` | `#84221C` |
+| Orange | `#F9801D` | `#BA6015` |
+| Yellow | `#FED83D` | `#BEA22D` |
+| Lime | `#80C71F` | `#609517` |
+| Green | `#5E7C16` | `#465D10` |
+| Cyan | `#169C9C` | `#107575` |
+| Light Blue | `#3AB3DA` | `#2B86A3` |
+| Blue | `#3C44AA` | `#2D337F` |
+| Purple | `#8932B8` | `#66258A` |
+| Magenta | `#C74EBD` | `#953A8D` |
+| Pink | `#F38BAA` | `#B6687F` |
+
+⭐ **The second column is the shading system, already solved.** Each hue has a
+canonical darker variant, so a face turned away from the light uses the shade
+column rather than an invented darker tone. Every material in the crew is then
+lit by the same logic — which is exactly what the invariant block is trying to
+guarantee.
+
+### Why a locked palette helps
+
+**"Pick hues far apart on the wheel" is vague; "pick two of sixteen named
+slots" is not.** A closed palette turns colour choice into a discrete decision
+that can be checked, and it removes the most common source of crew drift —
+six generations each inventing a slightly different teal.
+
+📌 **It also buys the look for free.** These sixteen values *are* the palette
+the aesthetic is recognised by. Matching them does more for the style than any
+adjective.
+
+### Assignment
+
+| Slot | Palette choice |
+|---|---|
+| Skin (shared) | one value, held for the whole crew |
+| Sleeves / base layer (shared) | a **low-chroma** slot: White, Light Gray, Gray, Brown, Black |
+| Background (shared) | Light Gray, Gray, or a low-chroma value that no role hue uses |
+| Role hue (per agent) | one **high-chroma** slot: Orange, Yellow, Lime, Cyan, Light Blue, Blue, Purple, Magenta, Pink, Red, Green |
+| Accent (per agent) | any remaining value, lower chroma than that agent's role hue |
+
+⚠️ **Reserve the greys and browns for the shared slots.** If a role hue comes
+from the low-chroma group it cannot carry identity at 32px.
+
+🔴 **Red and Green are both in the palette — never assign them as the role hues
+of two members of the same crew.** Roughly 1 in 12 men cannot separate them,
+and a sidebar is exactly where that fails. Pick one, or neither.
+
+📌 With eleven usable high-chroma slots, a crew larger than eleven agents must
+reuse hues. When that happens, **separate the duplicates on headwear and prop
+silhouette** and say so in the crew map — do not invent an off-palette colour
+to avoid the collision.
 
 ## Resolution and surface — the exact texel spec
 
@@ -320,10 +386,11 @@ CREW INVARIANTS — identical in every image
 - Camera: <straight-on front view | turned 10-15° to viewer's right>
 - Head: cube, exactly as wide as the torso, ~55% of visible height, eyes to viewer
 - Texel grid: 8 texels per head face (head 8x8x8, torso 8x12x4, arms 4x12x4)
-- Light: from <direction>, flat per-face shading, 2-3 quantised shades
-- Skin: <colour>
-- Sleeves / base layer: <colour>
-- Background: <colour or transparent>
+- Light: from <direction>; faces away from light use that material's shade value
+- Palette: locked 16-value dye palette, base + shade column only
+- Skin: <palette name + hex>
+- Sleeves / base layer: <palette name + hex>
+- Background: <palette name + hex, or transparent>
 - Canvas: <N>×<N> square, bust fills 80-90% of width, centred
 - Style: flat quantised shading, hard nearest-neighbour edges,
   no anti-aliasing, no gradients, no gloss, no outlines
@@ -350,8 +417,9 @@ that requires a redraw, not a note:
 2. **Same crop height?** Shoulders on one and waist on another reads as two sets.
 3. **Same texel size?** Finer blocks on one member breaks the species.
 4. **Same light direction?** Shadows on opposite sides look like different art.
-5. **Same skin, sleeves, background?** These are the shared slots; any drift
-   here destroys the family resemblance.
+5. **Same skin, sleeves, background — and are all values on the palette?** Any
+   off-palette tone breaks the set, and shared-slot drift destroys the family
+   resemblance.
 6. **Same head proportion, and is the head as wide as the torso?** A narrower
    head is the most common drift and makes the figure read as generic rather
    than voxel.
@@ -407,12 +475,15 @@ specific existing property.**
 aesthetic, never the vocabulary — that distinction is what makes this skill
 safe to publish and safe to use commercially.
 
-📌 **On the proportions.** The 8×8×8 head and 8×12×4 torso are a *geometric
-specification*, the same kind of fact as a paper size or a screen aspect ratio
-— and they are widely documented and reimplemented. Using them is not copying
-a character. What would cross the line is generating a **specific named
-character**, reproducing its face and colours, or naming the output after a
-franchise. The spec is a grid; the character is a design.
+📌 **On the proportions and the palette.** The 8×8×8 head and 8×12×4 torso are
+a *geometric specification*, the same kind of fact as a paper size — widely
+documented and reimplemented. A list of sixteen hex values is likewise factual
+data, not creative expression; short colour lists are not protectable.
+
+What would cross the line is generating a **specific named character**,
+reproducing its face and outfit, using a franchise logo or font, or naming the
+output after it. **The spec is a grid and the palette is a list; the character
+is a design.** This skill uses the first two and refuses the third.
 
 ## Pitfalls
 
@@ -436,6 +507,10 @@ fastest way to make a coherent set look like a collection of unrelated files.
 model of a blocky character: correct geometry, soft lighting, anti-aliased
 edges, no visible texels. It looks competent and it is the wrong style. Check
 for a visible square grid before delivering.
+
+**Do not let the model pick "a nice teal".** Every value is a named palette
+entry with a hex code. An approximate colour is off-palette, and off-palette is
+the fastest way to lose the look.
 
 **Do not rely on the model remembering the last image.** Each generation is
 independent and will re-decide the camera angle, texel size and crop unless
