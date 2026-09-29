@@ -44,10 +44,15 @@ One square image per agent: a blocky humanoid **bust** — head, torso and arms,
 cropped at the chest like a profile picture. Cube head, prism torso, two square
 eyes. Hard 90° edges, no curves, no legs.
 
-**Low-resolution on purpose.** A visible texel grid of roughly 8–16 squares
-across the head, two to four quantised shades per material, and hard
-nearest-neighbour edges. No anti-aliasing, no gradients, no gloss — a diagonal
-is a visible staircase of squares.
+**Low-resolution on purpose, to an exact spec.** Classic voxel-character
+proportions in texels — head `8×8×8`, torso `8×12×4`, arms `4×12×4` — with
+**8 texels per head face**, flat per-face shading, and hard nearest-neighbour
+edges. No anti-aliasing, no gradients, no gloss: a diagonal is a visible
+staircase of squares.
+
+> The head is **exactly as wide as the torso**. That one proportion is what
+> separates a voxel character from a generic blocky figure — and it is the
+> first thing an image model gets wrong if you don't say it.
 
 Each one names its job three ways: **headwear, outfit block, and one oversized
 prop.**

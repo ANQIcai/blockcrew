@@ -73,9 +73,11 @@ job*, in the same instant they read the role.
 - **Anatomy, all rectangular prisms:** one cube head, one rectangular torso,
   two arms. Blunt square ends. No hands or feet as separate shapes — the arm
   simply ends.
-- **Proportions:** head is **40–50% of the visible figure** — it dominates,
-  because at avatar size the head is what identifies. Torso roughly the same
-  width as the head; arms narrower, angled slightly inward or holding the prop.
+- **Proportions are specified exactly** in the texel spec below: head 8×8×8,
+  torso 8 wide × 12 tall × 4 deep, arms 4×12×4. 🔴 **The head is exactly as
+  wide as the torso** — a model left to itself always makes it narrower, and
+  that single error is what makes an output look generic rather than voxel.
+  In a bust the head is ~55% of visible height and should look slightly too big.
 - **The crop is the same for every member:** the bottom edge cuts the torso at
   the same height across the crew. ⚠️ One member cropped at the shoulders and
   another at the waist reads as two different sets.
@@ -225,48 +227,79 @@ member defeats the point of a crew.
 they still collide, ask the user which distinction matters to them rather
 than guessing.
 
-## Resolution and surface — the pixelated read
+## Resolution and surface — the exact texel spec
 
-🔴 **Blocky geometry alone is not enough.** A cube-headed figure rendered with
-smooth, perfectly flat surfaces looks like a modern low-poly toy, not a
-low-resolution character. The pixelated quality comes from the **surface**, not
-only the shape.
+🔴 **Blocky geometry alone is not enough.** A cube-headed figure with smooth
+flat surfaces is a modern low-poly toy, not a low-resolution character. The
+pixelated read comes from the **surface**, not only the shape.
 
-Three things produce it, and all three are required:
+### The proportional system
 
-**1. A visible texel grid.** Every surface is divided into large square texels
-— roughly **8–16 across the width of the head**, held consistent across the
-whole figure and the whole crew. The texels must be individually visible at
-full size. If a surface reads as one unbroken colour field, the resolution is
-too high.
+Vague instructions ("blocky", "pixelated") produce vague output. Use the
+classic voxel-character proportions instead — a functional geometry spec, in
+texels:
 
-**2. Quantised variation within each colour region.** Adjacent texels of the
-same material differ by small steps in brightness — two to four discrete
-shades of the role hue, assigned per texel, never blended. This is what makes
-a surface read as *material* rather than as vector fill.
+| Part | Width | Height | Depth |
+|---|---|---|---|
+| Head | 8 | 8 | 8 |
+| Torso | 8 | 12 | 4 |
+| Arm (each) | 4 | 12 | 4 |
 
-⚠️ **This is not noise and not texture detail.** It is a handful of flat
-values snapped to the texel grid. No grain, no speckle, no photographic
-texture, no per-pixel randomness.
+⭐ **Three consequences make this style recognisable, and all three are
+counter-intuitive:**
 
-**3. Hard pixel edges — nearest-neighbour, never anti-aliased.** Every boundary
-between colours is a stepped square edge. No feathering, no soft transitions,
-no smoothed diagonals. A diagonal is a visible staircase of squares.
+1. **The head is exactly as wide as the torso.** Not narrower. This is the
+   single most identifying proportion, and a model left to itself will always
+   make the head narrower.
+2. **The torso is deep-thin** — 8 wide but only 4 deep, a slab rather than a
+   box.
+3. **Arms are half the torso width** — 4 to the torso's 8.
 
-⭐ **Low resolution is a design constraint being displayed, not a defect being
-hidden.** The staircase edge is the whole aesthetic — smoothing it produces a
-cleaner image that has lost the point.
+For a bust cropped mid-torso, the visible figure is 8 texels of head above
+roughly 6 of torso, so the head is **~55% of the visible height**. It should
+look slightly too big. That is correct.
 
-**Say it in the prompt explicitly.** Image models default to smooth, polished
-output, so the words that matter are: *low-resolution texel grid, visible
-square pixels, nearest-neighbour edges, no anti-aliasing, no gradients,
-quantised flat shading*. Omitting them yields a glossy 3D render of a blocky
-character — geometrically correct and stylistically wrong.
+### The texel grid
 
-⚠️ **Render at high pixel dimensions with a low apparent resolution.** The file
-is 1024×1024 or larger; the *apparent* grid is coarse. Do not generate a small
-image and upscale it — that softens the edges, which destroys the only quality
-this section exists to produce.
+**Every face of the head is exactly 8 × 8 texels.** Not "roughly 8–16" — eight.
+Every other surface uses the same texel size, so a 4-wide arm face is 4 texels
+across. **One texel size for the whole figure and the whole crew.**
+
+This is the number that does the work: at 8 texels across a face, an eye is one
+or two texels, and detail below that is impossible. **The grid enforces the
+simplicity that a written rule only requests.**
+
+### Surface shading
+
+- **Two to three quantised shades per material**, snapped to the texel grid.
+  Never blended.
+- Faces pointing away from the light are a **flat step darker across the whole
+  face** — not gradient-shaded within it.
+- ⚠️ **Not noise, not texture detail.** A handful of flat values on the grid.
+  No grain, no speckle, no per-pixel randomness, no photographic texture.
+
+### Edges
+
+**Hard nearest-neighbour, never anti-aliased.** Every colour boundary is a
+stepped square edge. No feathering, no smoothed diagonals. A diagonal is a
+visible staircase.
+
+⭐ **Low resolution is a constraint being displayed, not a defect being
+hidden.** The staircase edge is the aesthetic; smoothing it gives a cleaner
+image that has lost the point.
+
+### Say it explicitly in every prompt
+
+Image models default to polished output. The words that matter:
+
+> *8×8 texels per head face, visible square texel grid, flat per-face shading,
+> hard nearest-neighbour edges, no anti-aliasing, no gradients, no gloss, no
+> outlines, no ambient occlusion*
+
+⚠️ **Render large with a coarse grid.** The file is 1024×1024 or more; the
+*apparent* resolution stays at 8 texels per head face. Do not generate small
+and upscale — that softens edges and destroys the only quality this section
+exists to produce.
 
 ## 🔴 The invariant block — how the crew stays consistent
 
@@ -285,9 +318,9 @@ Fill this in before generating anything, then reuse it unchanged:
 CREW INVARIANTS — identical in every image
 - Framing: upper-body bust, cropped at <exact chest/waist point>
 - Camera: <straight-on front view | turned 10-15° to viewer's right>
-- Head: cube, 40-50% of visible figure, eyes meeting the viewer
-- Texel grid: <N> squares across the head width
-- Light: from <direction>, <N> quantised shades per material
+- Head: cube, exactly as wide as the torso, ~55% of visible height, eyes to viewer
+- Texel grid: 8 texels per head face (head 8x8x8, torso 8x12x4, arms 4x12x4)
+- Light: from <direction>, flat per-face shading, 2-3 quantised shades
 - Skin: <colour>
 - Sleeves / base layer: <colour>
 - Background: <colour or transparent>
@@ -319,7 +352,9 @@ that requires a redraw, not a note:
 4. **Same light direction?** Shadows on opposite sides look like different art.
 5. **Same skin, sleeves, background?** These are the shared slots; any drift
    here destroys the family resemblance.
-6. **Same head proportion?** A smaller head on one member reads as a child.
+6. **Same head proportion, and is the head as wide as the torso?** A narrower
+   head is the most common drift and makes the figure read as generic rather
+   than voxel.
 
 ⚠️ **Report every mismatch found, including ones left unfixed.** A consistency
 check whose result is never stated is indistinguishable from one that never ran.
@@ -371,6 +406,13 @@ specific existing property.**
 ⭐ **Style is not protectable; specific characters and names are.** Borrow the
 aesthetic, never the vocabulary — that distinction is what makes this skill
 safe to publish and safe to use commercially.
+
+📌 **On the proportions.** The 8×8×8 head and 8×12×4 torso are a *geometric
+specification*, the same kind of fact as a paper size or a screen aspect ratio
+— and they are widely documented and reimplemented. Using them is not copying
+a character. What would cross the line is generating a **specific named
+character**, reproducing its face and colours, or naming the output after a
+franchise. The spec is a grid; the character is a design.
 
 ## Pitfalls
 
