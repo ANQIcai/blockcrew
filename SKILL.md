@@ -35,7 +35,7 @@ identical.** Every rule below exists to hold both.
 3. **Propose the crew map before generating anything.** One row per agent:
 
    ```
-   <agent> — <role in three words> — <headwear> — <outfit> — <prop> — <hue>
+   <agent> — <role in three words> — <headwear> — <top> — <prop> — <accent> — <hue>
    ```
 
    State the shared neutral and the shared view angle once, above the table.
@@ -90,22 +90,49 @@ briefcase says "career"; a small blocky person *holding* a briefcase says
 "this is the agent who handles my career". The second is what an avatar is
 for — it stands in for someone.
 
-## Colour
+## Colour — a fuller palette, held together by what is shared
 
-Exactly **three semantic colours per avatar** — semantic, meaning three
-*materials*, each rendered as two to four quantised shades on the texel grid:
+Each avatar carries **five to seven materials**. A three-colour figure was too
+sparse to read as a person: skin, hair, top, trousers and shoes are five
+different things before the job is even named.
 
-| Slot | Rule |
-|---|---|
-| Shared neutral | **Identical across the whole crew.** Skin tone, limbs, and any unpainted body area. This is the family resemblance |
-| Role hue | One per agent, high chroma, unique within the crew. Used on the prop and the outfit block — the two things that name the job |
-| Background | One flat colour, or transparent. Same choice for every member |
+🔴 **The crew coheres through the SHARED slots, not through scarcity.** Three
+of the slots below are identical for every member — that is the family
+resemblance. The rest are free to vary, and should.
 
-- Pick role hues **far apart on the wheel**, not neighbouring shades.
+| Slot | Shared or per-agent | Notes |
+|---|---|---|
+| Skin | **shared** | One tone for the whole crew, or match the user's own if they ask |
+| Background | **shared** | One flat colour, or transparent — same choice for every member |
+| Base garment | **shared** | Trousers/lower body. The quiet neutral that ties the set together |
+| Hair | per-agent | Can differ freely; it is also a separator |
+| Top / uniform | per-agent | Carries the role hue |
+| Prop | per-agent | Role hue, or its own accent |
+| Accent | per-agent, optional | One extra: shoes, belt, collar, lanyard, hatband |
+
+**Each material gets two to four quantised shades** on the texel grid — a base
+value plus one or two steps darker for the sides facing away from the light.
+That is what makes a surface read as material rather than as vector fill, and
+it is why a five-material figure is not a busy one.
+
+### Keeping it from turning into confetti
+
+- **One dominant role hue per agent**, high chroma, unique in the crew. Every
+  other per-agent colour stays **lower in saturation** than it. A figure with
+  four equally loud colours has no role hue at all.
+- **Pick role hues far apart on the wheel**, not neighbouring shades.
 - 🔴 **Never rely on red-versus-green to separate two agents.** Roughly 1 in 12
   men cannot distinguish them; a fleet sidebar is exactly where that fails.
-- No smooth gradients, no soft shadows, no ambient occlusion, no glow. Any
-  shading is **quantised**, not blended — see the texel grid below.
+- Light source is **constant across the crew** — same direction, same strength.
+  Shading steps that disagree between members break the set faster than colour
+  choices do.
+- No smooth gradients, no soft shadows, no ambient occlusion, no glow. All
+  shading is quantised to the texel grid.
+
+⭐ **Richness and coherence are not opposites — they are different slots.** The
+earlier three-colour rule bought coherence by making every figure poor. Fixing
+the shared slots buys the same coherence while letting each member be a fully
+dressed character.
 
 ## Naming the role: outfit, headwear, one prop
 
@@ -129,16 +156,16 @@ legible when the figure is 32px tall and the prop has become a smudge.
 
 Worked examples, tested for silhouette separation:
 
-| Role | Headwear / hair | Outfit | Prop | Hue |
-|---|---|---|---|---|
-| Career / job search | neat side-part block | collared shirt + tie | briefcase | indigo |
-| Trading / investment | headset | open collar | candlestick bar | teal |
-| Admin / butler | slicked flat hair | waistcoat with lapels | serving tray | warm grey |
-| Building / engineering | **hard hat** | hi-vis band across chest | wrench | amber |
-| Content / filming | **backwards cap** | plain tee | boxy camera held up | magenta |
-| Marketing | **beret** | bold-panel top | megaphone | cyan |
-| Research | round flat-top hair | lab-coat lapels | square-lens magnifier | violet |
-| Ops / infrastructure | **beanie** | zip-up panel | toolbox | slate blue |
+| Role | Headwear / hair | Top | Prop | Accent | Role hue |
+|---|---|---|---|---|---|
+| Career / job search | neat side-part | collared shirt + tie | briefcase | polished shoes | indigo |
+| Trading / investment | headset | open collar | candlestick bar | lanyard | teal |
+| Admin / butler | slicked flat hair | waistcoat + lapels | serving tray | white gloves | warm grey |
+| Building / engineering | **hard hat** | hi-vis band | wrench | tool belt | amber |
+| Content / filming | **backwards cap** | plain tee | boxy camera | camera strap | magenta |
+| Marketing | **beret** | bold-panel top | megaphone | scarf | cyan |
+| Research | round flat-top hair | lab-coat lapels | square-lens magnifier | breast-pocket block | violet |
+| Ops / infrastructure | **beanie** | zip-up panel | toolbox | boots | slate blue |
 
 🔴 **Where two roles share a prop shape, the headwear must differ sharply.**
 Engineer and ops both hold tools; the hard hat versus the beanie is what
@@ -162,8 +189,11 @@ For each role the user actually has, answer three questions in order:
    role-specific option available: a uniform cap, a visor, a headset, a
    particular hair shape. 🔴 **Check it against every headwear already
    assigned in this crew** — this is the separator that survives to 32px.
-3. **What one colour block says the uniform?** A collar, an apron, a sash, a
-   panel. One or two rectangles, nothing finer than a visible chunk.
+3. **What does the top look like?** A collar, an apron, a sash, a panel — one
+   or two rectangles carrying the role hue, nothing finer than a visible chunk.
+4. **One optional accent.** Shoes, belt, lanyard, hatband, strap. Lower
+   saturation than the role hue. Skip it if nothing fits; do not invent
+   decoration to fill the slot.
 
 **If a role is purely abstract** — "memory", "router", "orchestrator" — give
 the figure an abstract prop rather than a vague gesture: a stacked block
@@ -271,6 +301,10 @@ safe to publish and safe to use commercially.
 
 **Do not add a second prop** to make a role clearer. Two props read as clutter
 at small size and destroy the silhouette. Choose a better single prop.
+
+**Do not vary the shared slots to add interest.** Skin, background and the
+base garment are the three things holding the crew together. Varying them is
+how a set becomes a collection.
 
 **Do not vary the neutral** between crew members to make them distinct. That is
 the one colour holding the set together.

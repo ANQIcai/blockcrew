@@ -73,9 +73,14 @@ tools, the hat is what separates them.
 
 ## The rules that do the work
 
-**Three colours per avatar.** A shared neutral identical across the whole crew
-— that is the family resemblance. One role hue, unique per agent. One
-background, same choice for everyone.
+**Five to seven materials per avatar** — skin, hair, top, base garment, prop,
+optional accent. Each rendered in two to four quantised shades on the texel
+grid.
+
+**Coherence comes from the shared slots, not from scarcity.** Skin, background
+and the base garment are identical across the whole crew; everything else
+varies freely. One dominant role hue per agent, with every other per-agent
+colour lower in saturation so the hue still reads.
 
 **Exactly one prop.** Not two. A second prop reads as clutter at avatar size
 and destroys the silhouette.
