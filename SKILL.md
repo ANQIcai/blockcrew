@@ -22,6 +22,54 @@ at 32–64px. They must answer two questions at once:
 look unrelated. Optimising only for the first produces six that look
 identical.** Every rule below exists to hold both.
 
+## Starting from a photo or character
+
+A user can supply a picture — themselves, a character, a mascot — and the crew
+is built as **variations of that base**.
+
+```sh
+python3 scripts/render.py --base me.jpg --roster my-crew.json --out avatars/
+```
+
+The renderer samples four regions and snaps each to its nearest palette slot,
+then prints what it chose:
+
+```
+🎨 Base image: me.jpg
+   hair        sampled #221911 → black (#1D1D21)
+   skin        sampled #C6885B → brown (#835432)
+   sleeve      sampled #A13A2D → brown (#835432)
+   background  sampled #2C3D70 → gray (#474F52)
+```
+
+Any slot can be overridden: `--skin`, `--hair`, `--sleeve`, `--background`.
+
+### 🔴 Be honest about what transfers
+
+| Transfers | Does not transfer |
+|---|---|
+| Skin tone | Facial features |
+| Hair colour | Expression, face shape |
+| Clothing colour | Hairstyle detail, glasses, age |
+| Background | Any likeness at all |
+
+**At 8 texels across a head face an eye is one texel.** There is no likeness
+available at this resolution, and promising one would be dishonest.
+
+⭐ **The useful framing is "same person rendered as a crew", not "portrait".**
+Deriving the *shared* slots from one photo makes every agent read as a
+variation of one character — which is what the shared-slot architecture
+already does. The photo just supplies the values instead of the user choosing
+them.
+
+⚠️ **Regions are fixed fractions of the frame**, assuming a roughly centred
+head-and-shoulders subject. No face detection: it would add a heavy dependency
+to guess something the user can override in one flag. A full-body shot or an
+off-centre crop samples the wrong areas — say so and offer the overrides
+rather than silently producing wrong colours.
+
+---
+
 ## 🔴 Two production methods — prefer the renderer
 
 **Method A — `scripts/render.py` (default).** Constructs the PNGs directly on

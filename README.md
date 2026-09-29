@@ -22,6 +22,20 @@ python3 scripts/render.py --roster my-crew.json --out avatars/
 
 ![example crew](assets/example-crew.png)
 
+**Start from a photo** — yourself, a character, a mascot — and the crew becomes
+variations of that base:
+
+```sh
+python3 scripts/render.py --base me.jpg --roster my-crew.json --out avatars/
+```
+
+It samples skin, hair, clothing and background, snaps each to the nearest
+palette slot, and prints what it chose so you can override any of them.
+
+> ⚠️ Colours transfer. Faces do not. At eight texels across a head face an eye
+> is one texel — there is no likeness available at this resolution, and the
+> skill says so rather than pretending otherwise.
+
 **Every quantity in this skill is a number** — head 8×8×8, torso 8×12×4, eight
 texels per head face, sixteen hex values, fixed crop, fixed angle. That is a
 rendering problem, not a generation problem, so the default method constructs

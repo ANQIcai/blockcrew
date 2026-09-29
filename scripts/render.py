@@ -165,6 +165,164 @@ SHARED = {
 }
 
 
+
+# ------------------------------------------------------------ base image ---
+# 🔴 WHAT A BASE IMAGE CAN AND CANNOT DO
+#   At 8 texels across a head face an eye is one texel. There is no likeness
+#   available at this resolution and promising one would be dishonest.
+#
+#   What DOES transfer, and transfers well:
+#     - skin tone, hair colour, clothing colour, background — snapped to the
+#       nearest palette slots
+#   What does not transfer at all:
+#     - facial features, expression, face shape, glasses, age, hairstyle detail
+#
+#   ⭐ The useful framing is "same person, rendered as a crew", not "portrait".
+#   Deriving the SHARED slots from one photo makes every agent read as a
+#   variation of that one character, which is exactly what the shared-slot
+#   architecture already does — the photo just supplies the values.
+
+
+def _load_pixels(path: pathlib.Path) -> tuple[list[list[tuple[int, int, int]]], int, int]:
+    """Decode an image to RGB rows. Pillow if present, else ffmpeg, else fail."""
+    try:
+        from PIL import Image  # type: ignore
+        im = Image.open(path).convert("RGB")
+        im.thumbnail((128, 128))
+        w, h = im.size
+        px = list(im.getdata())
+        return ([list(px[r * w:(r + 1) * w]) for r in range(h)], w, h)
+    except ImportError:
+        pass
+
+    import shutil
+    import subprocess
+    import tempfile
+    if not shutil.which("ffmpeg"):
+        raise SystemExit(
+            "❌ --base needs Pillow or ffmpeg to read the image.\n"
+            "   pip install pillow      (or)      brew install ffmpeg\n"
+            "   Alternatively pass the colours directly with --skin/--hair/--background."
+        )
+    with tempfile.TemporaryDirectory() as td:
+        raw = pathlib.Path(td) / "s.ppm"
+        subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-i", str(path),
+                        "-vf", "scale=128:-1", "-pix_fmt", "rgb24", str(raw)], check=True)
+        data = raw.read_bytes()
+    # P6 header: magic, width height, maxval, then binary RGB
+    parts, idx = [], 0
+    while len(parts) < 4:
+        while data[idx:idx + 1].isspace():
+            idx += 1
+        if data[idx:idx + 1] == b"#":
+            while data[idx:idx + 1] != b"\n":
+                idx += 1
+            continue
+        start = idx
+        while not data[idx:idx + 1].isspace():
+            idx += 1
+        parts.append(data[start:idx])
+    idx += 1
+    w, h = int(parts[1]), int(parts[2])
+    body = data[idx:]
+    rows = []
+    for r in range(h):
+        off = r * w * 3
+        rows.append([tuple(body[off + c * 3: off + c * 3 + 3]) for c in range(w)])
+    return (rows, w, h)
+
+
+def _median_colour(rows, x0f, x1f, y0f, y1f) -> tuple[int, int, int]:
+    """Median RGB of a fractional region. Median, not mean — a mean of hair and
+    background returns a colour present in neither."""
+    h, w = len(rows), len(rows[0])
+    sample = [rows[y][x]
+              for y in range(int(y0f * h), max(int(y1f * h), int(y0f * h) + 1))
+              for x in range(int(x0f * w), max(int(x1f * w), int(x0f * w) + 1))]
+    if not sample:
+        return (128, 128, 128)
+    return tuple(sorted(c[i] for c in sample)[len(sample) // 2] for i in range(3))
+
+
+def nearest_palette(rgb: tuple[int, int, int], allowed: list[str] | None = None) -> str:
+    """Closest palette name, matching on hue and chroma, not raw RGB distance.
+
+    🔴 Two traps, both measured on a tan skin tone #C6885B:
+
+    1. Plain RGB distance makes grey a magnet. Grey sits near the centre of the
+       colour cube and is therefore near everything mid-tone: light_gray scored
+       14581 against brown's 26635, so the "nearest" colour was the one that
+       looked least like it.
+    2. Adding chroma alone then picked pink, because pink's chroma happens to
+       match. Chroma says how colourful, not which colour.
+
+    Hue is the discriminator. Tan and brown are the same hue family (~26°);
+    pink is 300° away. Weighting hue difference is what makes skin tones land
+    on brown instead of bubblegum.
+    """
+    import colorsys
+
+    def hcl(c):
+        r, g, b = (x / 255 for x in c)
+        h, l, s = colorsys.rgb_to_hls(r, g, b)
+        return h * 360, (max(c) - min(c)), l * 255
+
+    th, tc, tl = hcl(rgb)
+    best, best_d = None, float("inf")
+    for name in (allowed or list(PALETTE)):
+        pal = hex_to_rgb(PALETTE[name][0])
+        ph, pc, pl = hcl(pal)
+        hue_gap = min(abs(ph - th), 360 - abs(ph - th))
+        # 🔴 Hue is meaningless for near-grey colours on EITHER side. Black
+        # #1D1D21 reports a hue of ~240° from three nearly equal channels;
+        # weighting that against dark hair's ~28° scored 28,000 and pushed
+        # black hair to brown. Fade the hue term by the LOWER of the two
+        # chromas, so a grey candidate is never penalised for a hue it does
+        # not really have.
+        hue_w = min(tc, pc, 80) / 80
+        d = (hue_gap ** 2) * 3.0 * hue_w
+        # Lightness outweighs chroma: the palette has only 16 entries, so an
+        # exact saturation match is rarely available while brightness almost
+        # always is. Weighting chroma higher sent blond hair to brown.
+        d += (pc - tc) ** 2 * 1.0
+        d += (pl - tl) ** 2 * 1.5
+        if d < best_d:
+            best, best_d = name, d
+    return best or "gray"
+
+
+def derive_from_base(path: pathlib.Path) -> dict:
+    """Sample a portrait for skin, hair, top and background palette slots.
+
+    ⚠️ Regions are fixed fractions of the frame, assuming a roughly centred
+    head-and-shoulders subject. No face detection — it would add a heavy
+    dependency to guess what the user can simply override.
+    """
+    rows, w, h = _load_pixels(path)
+    hair_rgb = _median_colour(rows, 0.42, 0.58, 0.06, 0.16)
+    skin_rgb = _median_colour(rows, 0.44, 0.56, 0.32, 0.44)
+    top_rgb  = _median_colour(rows, 0.35, 0.65, 0.80, 0.94)
+    bg_rgb   = _median_colour(rows, 0.00, 0.08, 0.00, 0.08)
+
+    # 🔴 Constrain each slot to plausible slots BEFORE matching. Unconstrained,
+    # a tan skin tone (#C6885B) lands on light_gray, because the palette has no
+    # skin colours and grey is numerically closest to everything mid-tone.
+    # Nearest-colour matching is only meaningful inside a candidate set that
+    # makes sense for the slot.
+    SKIN_SLOTS = ["brown", "orange", "pink", "white", "light_gray", "black"]
+    HAIR_SLOTS = ["black", "brown", "yellow", "orange", "white", "light_gray", "gray"]
+
+    derived = {
+        "hair": nearest_palette(hair_rgb, allowed=HAIR_SLOTS),
+        "skin": nearest_palette(skin_rgb, allowed=SKIN_SLOTS),
+        "sleeve": nearest_palette(top_rgb, allowed=sorted(LOW_CHROMA)),
+        "background": nearest_palette(bg_rgb, allowed=sorted(LOW_CHROMA)),
+    }
+    derived["_sampled"] = {"hair": hair_rgb, "skin": skin_rgb,
+                           "top": top_rgb, "background": bg_rgb}
+    return derived
+
+
 # ---------------------------------------------------------------- plumbing --
 def hex_to_rgb(h: str) -> tuple[int, int, int]:
     h = h.lstrip("#")
@@ -267,6 +425,11 @@ def main() -> int:
     ap.add_argument("--out", type=pathlib.Path, default=pathlib.Path("out"))
     ap.add_argument("--scale", type=int, default=64,
                     help="pixels per texel (default 64 -> 1024x1024)")
+    ap.add_argument("--base", type=pathlib.Path,
+                    help="portrait to derive skin/hair/top/background from. "
+                         "Colours only — faces do not survive an 8-texel grid.")
+    ap.add_argument("--skin"); ap.add_argument("--hair")
+    ap.add_argument("--sleeve"); ap.add_argument("--background")
     ap.add_argument("--list", action="store_true", help="show palette, headwear and props")
     a = ap.parse_args()
 
@@ -276,6 +439,28 @@ def main() -> int:
         print("headwear  :", ", ".join(HEADWEAR))
         print("props     :", ", ".join(PROPS))
         return 0
+
+    shared = dict(SHARED)
+    if a.base:
+        derived = derive_from_base(a.base)
+        sampled = derived.pop("_sampled")
+        print(f"🎨 Base image: {a.base.name}")
+        for slot, name in derived.items():
+            r, g, b = sampled["top" if slot == "sleeve" else slot]
+            print(f"   {slot:11} sampled #{r:02X}{g:02X}{b:02X} → {name} "
+                  f"({PALETTE[name][0]})")
+        print("   ⚠️  Colours only. Facial features, expression and hairstyle "
+              "do not survive an 8-texel grid.")
+        print("   Override any slot with --skin/--hair/--sleeve/--background\n")
+        shared.update(derived)
+
+    for slot in ("skin", "hair", "sleeve", "background"):
+        if getattr(a, slot, None):
+            val = getattr(a, slot)
+            if val not in PALETTE:
+                print(f"❌ '{val}' is not a palette slot. Run --list.")
+                return 1
+            shared[slot] = val
 
     roster = json.loads(a.roster.read_text()) if a.roster else EXAMPLE_ROLES
     if not a.roster:
@@ -287,7 +472,7 @@ def main() -> int:
 
     a.out.mkdir(parents=True, exist_ok=True)
     for role, cfg in roster.items():
-        px = render(role, cfg, SHARED, a.scale)
+        px = render(role, cfg, shared, a.scale)
         path = a.out / f"{role}.png"
         write_png(path, px)
         print(f"✅ {path}  {len(px[0])}x{len(px)}  hue={cfg['hue']} "
