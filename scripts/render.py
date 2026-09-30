@@ -80,16 +80,20 @@ ARM_W = 4
 #   c   accent            k    black       w    white
 #   p/P prop base/shade
 
+# 🔴 Style-guide entity rule: top and front brighter than bottom and back.
+# On a front-facing bust that becomes a highlight row at the top of each mass
+# and a shadow row at its lower edge. This is NOT pillow shading — the shades
+# follow the form's top and bottom, not concentric rings from the centre.
 HEAD_DEFAULT = [
+    "HHHHHHHH",   # hair, top plane catches the light
     "hhhhhhhh",
-    "hhhhhhhh",
-    "ssssssss",
+    "SSSSSSSS",   # brow line sits in shadow under the hair
     "seessees",
     "ssssssss",
     "ssssssss",
     "sssmmsss",
-    "ssssssss",
-]
+    "ssssssss",   # 🔴 a full-width shadow row here reads as a BEARD on every
+]           # face, not as a jaw. Form shading must not invent features.
 
 # Headwear replaces the top rows of the head. It is the separator that
 # survives to 32px: at that size a held prop is a smudge and the outline of
@@ -107,15 +111,15 @@ HEADWEAR = {
 }
 
 BODY_DEFAULT = [
-    "......ssssssss......",   # neck row, skin
-    "..aaaaccccccccaaaa..",   # collar / accent
+    "......SSSSSSSS......",   # neck, shadowed by the head above it
+    "..AAAAccccccccAAAA..",   # collar lit; arm tops catch light
+    "..aaaattttttttaaaa..",   # upper chest: lighter
     "..aaaaTTTTTTTTaaaa..",
     "..aaaaTTTTTTTTaaaa..",
     "..aaaaTTTTTTTTaaaa..",
     "..aaaaTTTTTTTTaaaa..",
     "..aaaaTTTTTTTTaaaa..",
-    "..aaaaTTTTTTTTaaaa..",
-    "..aaaaTTTTTTTTaaaa..",
+    "..AAAATTTTTTTTAAAA..",   # lower arm falls into shadow
 ]
 
 # Props are drawn over the body layer, held at chest height or raised —
@@ -323,6 +327,52 @@ def derive_from_base(path: pathlib.Path) -> dict:
     return derived
 
 
+
+# ------------------------------------------------------------ colour ramps ---
+# 🔴 A STRAIGHT RAMP IS THE WRONG RAMP
+#   A straight ramp varies only brightness. The Minecraft style guide is blunt
+#   about it: straight ramps "often aren't used due to their dull look".
+#   Vanilla ramps are HUE-SHIFTED — shadows shift toward blue and gain
+#   saturation, highlights shift toward yellow and lose it.
+#
+#   ⭐ This is why a technically-correct palette can still look flat. The
+#   palette supplies the MIDTONE; the ramp is derived from it by rule.
+#
+#   Measured on cyan #169C9C:
+#     straight  #107575 → #169C9C            (two values, same hue)
+#     shifted   #09616D → #169C9C → #29B8A7  (hue rotates across the ramp)
+
+RAMP_SPEC = (
+    (-0.30, +0.020, +0.06),   # shadow:    darker, toward blue, more saturated
+    (0.0,    0.0,    0.0),    # midtone:   the palette value itself
+    (+0.18, -0.020, -0.08),   # highlight: brighter, toward yellow, less saturated
+)
+
+
+def ramp(palette_name: str) -> list[tuple[int, int, int]]:
+    """Three-shade hue-shifted ramp derived from a palette midtone.
+
+    The palette entry is the identity colour. The shades are computed, not
+    invented: one deterministic rule applied to every material, which is what
+    keeps a crew lit consistently.
+    """
+    import colorsys
+    r, g, b = (c / 255 for c in hex_to_rgb(PALETTE[palette_name][0]))
+    h, s, v = colorsys.rgb_to_hsv(r, g, b)
+    out = []
+    for dv, dh, ds in RAMP_SPEC:
+        rr, gg, bb = colorsys.hsv_to_rgb(
+            (h + dh) % 1.0,
+            max(0.0, min(1.0, s + ds)),
+            max(0.0, min(1.0, v * (1 + dv))),
+        )
+        out.append((round(rr * 255), round(gg * 255), round(bb * 255)))
+    return out
+
+
+SHADOW, MID, HIGHLIGHT = 0, 1, 2
+
+
 # ---------------------------------------------------------------- plumbing --
 def hex_to_rgb(h: str) -> tuple[int, int, int]:
     h = h.lstrip("#")
@@ -350,17 +400,23 @@ def write_png(path: pathlib.Path, pixels: list[list[tuple[int, int, int]]]) -> N
 def build_grid(role: str, cfg: dict, shared: dict) -> list[list[str | None]]:
     """Compose one avatar as a GRID_H x GRID_W map of palette keys."""
     hue = cfg["hue"]
+    # (palette_name, ramp_index) — SHADOW / MID / HIGHLIGHT.
+    # 🔴 Entity rule from the style guide: "the top and front of the entity need
+    # to be brighter than the bottom and back." So an outline is the SHADOW of
+    # its own material, never a separate black — black outlines are an item-
+    # texture convention and look wrong on an entity.
     colours = {
-        "s": (shared["skin"], 0),    "S": (shared["skin"], 1),
-        "m": (shared["skin"], 1),
-        "h": (shared["hair"], 0),    "H": (shared["hair"], 1),
-        "e": ("black", 0),           "k": ("black", 0),   "w": ("white", 0),
-        "a": (shared["sleeve"], 1),  "A": (shared["sleeve"], 1),
-        "t": (hue, 0),               "T": (hue, 0),
-        "c": (hue, 1),
-        # 🔴 The prop must NOT use the torso hue — a yellow wrench on a yellow
+        "s": (shared["skin"], MID),      "S": (shared["skin"], SHADOW),
+        "m": (shared["skin"], SHADOW),
+        "h": (shared["hair"], MID),      "H": (shared["hair"], SHADOW),
+        "e": (shared["hair"], SHADOW),   "k": ("black", MID),
+        "w": ("white", MID),
+        "a": (shared["sleeve"], MID),    "A": (shared["sleeve"], SHADOW),
+        "t": (hue, HIGHLIGHT),           "T": (hue, MID),
+        "c": (hue, HIGHLIGHT),
+        # The prop must not use the torso hue — a yellow wrench on a yellow
         # torso is invisible, which defeats the one-prop rule entirely.
-        "p": (shared["prop_dark"], 0), "P": (shared["prop_light"], 0),
+        "p": (shared["prop_dark"], MID), "P": (shared["prop_light"], MID),
     }
 
     grid: list[list[str | None]] = [[None] * GRID_W for _ in range(GRID_H)]
@@ -389,12 +445,12 @@ def build_grid(role: str, cfg: dict, shared: dict) -> list[list[str | None]]:
 
 def render(role: str, cfg: dict, shared: dict, scale: int) -> list[list[tuple[int, int, int]]]:
     grid = build_grid(role, cfg, shared)
-    bg = hex_to_rgb(PALETTE[shared["background"]][0])
+    bg = ramp(shared["background"])[MID]
     out = []
     for row in grid:
         line = []
         for cell in row:
-            rgb = bg if cell is None else hex_to_rgb(PALETTE[cell[0]][cell[1]])
+            rgb = bg if cell is None else ramp(cell[0])[cell[1]]
             line.extend([rgb] * scale)
         out.extend([line] * scale)
     return out

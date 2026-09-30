@@ -225,10 +225,10 @@ resemblance. The rest are free to vary, and should.
 | Prop | per-agent | Role hue, or its own accent |
 | Accent | per-agent, optional | One upper-body extra: collar, lanyard, badge, hatband, strap, earpiece |
 
-**Each material uses exactly two values from the palette**: its base, and that
-row's shade column for faces turned away from the light. Two flat values, no
-blending, no invented midtones — the palette supplies both, so shading is a
-lookup rather than a judgement.
+**Each material gets a three-shade hue-shifted ramp** derived from its palette
+midtone: shadow (darker, toward blue, more saturated), midtone, highlight
+(brighter, toward yellow, less saturated). Three flat values, no blending —
+computed by one rule, so every material in the crew is lit identically.
 
 ### Keeping it from turning into confetti
 
@@ -351,11 +351,11 @@ a crew cohere without being told to.
 | Magenta | `#C74EBD` | `#953A8D` |
 | Pink | `#F38BAA` | `#B6687F` |
 
-⭐ **The second column is the shading system, already solved.** Each hue has a
-canonical darker variant, so a face turned away from the light uses the shade
-column rather than an invented darker tone. Every material in the crew is then
-lit by the same logic — which is exactly what the invariant block is trying to
-guarantee.
+⚠️ **The second column is a starting point, not the shading system.** It is a
+*straight* darker variant, and the style guide rejects straight ramps as dull.
+🔴 **Use the hue-shifted ramp instead** — see "Matching the voxel-game art
+style" below. The palette supplies the midtone; shadow and highlight are
+derived from it by a fixed HSV rule, applied identically to every material.
 
 ### Why a locked palette helps
 
@@ -463,6 +463,87 @@ Image models default to polished output. The words that matter:
 *apparent* resolution stays at 8 texels per head face. Do not generate small
 and upscale — that softens edges and destroys the only quality this section
 exists to produce.
+
+## Matching the voxel-game art style — the real rules
+
+Researched 30 Sep 2026 against the **Blockbench Minecraft Style Guide**, the
+document modders use to make new content look native. Three of our earlier
+rules were wrong.
+
+### 🔴 1. A straight ramp is the wrong ramp
+
+A *straight ramp* varies only brightness. The style guide is blunt: straight
+ramps *"often aren't used due to their dull look"*.
+
+**Vanilla ramps are hue-shifted.** Shadows shift toward blue and gain
+saturation; highlights shift toward yellow and lose it.
+
+| | shades |
+|---|---|
+| straight (wrong) | `#107575` → `#169C9C` |
+| hue-shifted (right) | `#09616D` → `#169C9C` → `#29B8A7` |
+
+⭐ **This is why a technically-correct palette still looks flat.** The palette
+supplies the *midtone*; the ramp is derived from it by rule — a fixed HSV
+offset applied to every material, which is also what keeps a crew lit
+identically.
+
+### 🔴 2. Entities are lit top-and-front
+
+The style guide's entity rule: *"the top and front of the entity need to be
+brighter than the bottom and back."* On a front-facing bust that becomes a
+highlight row at the top of each solid mass and a shadow at its lower edge.
+
+⚠️ **This is the one shading rule that is not optional.** A flat, evenly
+filled figure reads as a UI icon; a top-lit one reads as a rendered entity.
+
+### 🔴 3. No black outlines on an entity
+
+Black outlines are an **item-texture** convention — the guide prescribes them
+for the 16×16 inventory sprites, *"a significantly darker outline"*, lit from
+the top left. Entities do not get them.
+
+So an edge is the **shadow shade of its own material**, never a separate
+black. Using item rules on an entity is the most common way a fan texture
+looks off without the artist being able to say why.
+
+### The artifacts to avoid, named
+
+The guide names these, and each is a real failure mode for a generator:
+
+| Artifact | What it is |
+|---|---|
+| **Banding** | Shades lined up brightest→darkest in a row, revealing the pixel grid |
+| **Pillow shading** | Shades applied concentrically from the centre outward, ignoring the form |
+| **Pancake shading** | Highlight on one side, shadow on the opposite side, ignoring the shape |
+| **Noise** | Brush-like speckle. *"Adds no information to the texture"* |
+| **Mixels** | Mixed resolutions in one image — elements finer than the texel grid |
+| **Jaggies** | Diagonals with an inconsistent step |
+
+🔴 **Anti-aliasing is explicitly not used.** Neither is dithering, here: the
+guide permits it for rough materials, but on a 20×18 bust it costs more
+legibility than it buys.
+
+### ⚠️ Form shading must not invent features
+
+Measured while building this: a full-width shadow row along the bottom of the
+head — correct by the top-brighter rule — **read as a beard on every member of
+the crew.**
+
+⭐ **A shading rule applied without looking at the result produces a feature
+nobody asked for.** The rule was right and the placement was wrong. Render it,
+look at it, then keep the rule.
+
+### Simplicity is the founding principle
+
+*"Minecraft's art style is founded in simplicity. The overall shape of an
+object should be defined by the model and most of the detail by the texture."*
+
+📌 That is the argument for the whole design: shape carries identity, texture
+carries material, and **detail that does not survive the grid is removed
+rather than shrunk.**
+
+---
 
 ## 🔴 The invariant block — Method B only
 

@@ -113,6 +113,15 @@ tools, the hat is what separates them.
 optional accent. Each rendered in two to four quantised shades on the texel
 grid.
 
+**Hue-shifted ramps, not flat fills.** Shadows shift toward blue and gain
+saturation; highlights shift toward yellow and lose it. Entities are lit
+top-and-front, and an edge is the shadow shade of its own material — never a
+black outline, which is an item-sprite convention that looks wrong on a
+character.
+
+> A straight ramp varies only brightness, and the style guide calls those
+> dull. This is why a technically-correct palette can still look flat.
+
 **A locked 16-colour palette.** Every value is a named slot with a hex code —
 greys and browns reserved for the shared slots, eleven high-chroma slots
 available as role hues. Each material uses its base value plus the palette's
