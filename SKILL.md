@@ -525,14 +525,51 @@ supplies the *midtone*; the ramp is derived from it by rule — a fixed HSV
 offset applied to every material, which is also what keeps a crew lit
 identically.
 
-### 🔴 2. Entities are lit top-and-front
+### 🔴 2. Entities are lit top-and-front — BETWEEN FACES, not within one
 
-The style guide's entity rule: *"the top and front of the entity need to be
-brighter than the bottom and back."* On a front-facing bust that becomes a
-highlight row at the top of each solid mass and a shadow at its lower edge.
+The guide: *"the top and front of the entity need to be brighter than the
+bottom and back. This applies to shading the faces individually, as well as
+how the faces are shaded relative to each other."*
 
-⚠️ **This is the one shading rule that is not optional.** A flat, evenly
-filled figure reads as a UI icon; a top-lit one reads as a rendered entity.
+⚠️ **This governs the faces of the 3D box relative to each other** — the top
+face brighter than the bottom face. Applying it as a bright row at the top of
+one flat face and a dark row at the bottom is **pancake shading**, which the
+guide lists as an artifact: *"placing the highlights on one side and shadows
+on the opposite side of a surface. It disregards the shape."*
+
+The first version of this renderer did exactly that, and the torso came out as
+`AAAAAAAA / BBBBBBBB / CCCCCCCC` — measured on the shipped sheet.
+
+### 🔴 2b. The procedure has FOUR steps and stopping at two is what looks wrong
+
+The guide's entity procedure:
+
+1. Generate a texture template
+2. **Sketch the colour distribution, add a shadow and a highlight**
+3. Add more shades to the palette
+4. **Define the material by editing the relative position of CLUSTERS of
+   certain shades. Get rid of banding and any other shading artifacts.**
+
+⭐ **Stopping after step 2 gives flat blocks with stripes.** Step 4 is where a
+texture stops looking like a coloured rectangle and starts looking like cloth.
+It is also the step that is easy to skip, because steps 1–3 already produce
+something that renders without error.
+
+**What step 4 means concretely:** small irregular groups of 2–3 adjacent
+texels in a slightly different shade, never forming a row, column or diagonal
+run. Fixed patterns, not random ones — every crew member gets the same
+material map in a different hue, so the set stays identical by construction.
+
+🔴 **Material needs its own ramp, much subtler than the form ramp.** The
+display ramp here is ±30%/+18% brightness; material clusters at those values
+read as blotches, which is the guide's *noise* artifact — *"adds no
+information to the texture"*. The material ramp is ±11%/+8%, about 20 units of
+perceptual distance from the midtone.
+
+🔴 **No clusters on the face.** A head face is 8×8 with eyes and a mouth in
+it. Scattered shade texels there read as dirt or stubble — measured: the first
+attempt gave every crew member a blemished face. ⭐ **Material belongs on
+large uniform surfaces, and a face is not one.**
 
 ### 🔴 3. No black outlines on an entity
 

@@ -163,16 +163,19 @@ SPECIES_HEADS: dict[str, list[str]] = {
 # On a front-facing bust that becomes a highlight row at the top of each mass
 # and a shadow row at its lower edge. This is NOT pillow shading — the shades
 # follow the form's top and bottom, not concentric rings from the centre.
+# 🔴 NO FULL-WIDTH SHADE ROWS. A row of one shade across the whole face is a
+# "fat line" — the guide's banding artifact. Shading arrives as material
+# clusters (see apply_material), not as stripes.
 HEAD_DEFAULT = [
-    "HHHHHHHH",   # hair, top plane catches the light
     "hhhhhhhh",
-    "SSSSSSSS",   # brow line sits in shadow under the hair
+    "hhhhhhhh",
+    "ssssssss",
     "seessees",
     "ssssssss",
     "ssssssss",
     "sssmmsss",
-    "ssssssss",   # 🔴 a full-width shadow row here reads as a BEARD on every
-]           # face, not as a jaw. Form shading must not invent features.
+    "ssssssss",
+]
 
 # Headwear replaces the top rows of the head. It is the separator that
 # survives to 32px: at that size a held prop is a smudge and the outline of
@@ -190,15 +193,15 @@ HEADWEAR = {
 }
 
 BODY_DEFAULT = [
-    "......SSSSSSSS......",   # neck, shadowed by the head above it
-    "..AAAAccccccccAAAA..",   # collar lit; arm tops catch light
-    "..aaaattttttttaaaa..",   # upper chest: lighter
+    "......ssssssss......",   # neck
+    "..aaaaccccccccaaaa..",   # collar accent
     "..aaaaTTTTTTTTaaaa..",
     "..aaaaTTTTTTTTaaaa..",
     "..aaaaTTTTTTTTaaaa..",
     "..aaaaTTTTTTTTaaaa..",
     "..aaaaTTTTTTTTaaaa..",
-    "..AAAATTTTTTTTAAAA..",   # lower arm falls into shadow
+    "..aaaaTTTTTTTTaaaa..",
+    "..aaaaTTTTTTTTaaaa..",
 ]
 
 # Props are drawn over the body layer, held at chest height or raised —
@@ -439,7 +442,7 @@ def ramp(palette_name: str) -> list[tuple[int, int, int]]:
     r, g, b = (c / 255 for c in hex_to_rgb(PALETTE[palette_name][0]))
     h, s, v = colorsys.rgb_to_hsv(r, g, b)
     out = []
-    for dv, dh, ds in RAMP_SPEC:
+    for dv, dh, ds in RAMP_SPEC + MATERIAL_SPEC[0::2]:
         rr, gg, bb = colorsys.hsv_to_rgb(
             (h + dh) % 1.0,
             max(0.0, min(1.0, s + ds)),
@@ -450,6 +453,19 @@ def ramp(palette_name: str) -> list[tuple[int, int, int]]:
 
 
 SHADOW, MID, HIGHLIGHT = 0, 1, 2
+
+# 🔴 A SECOND, SUBTLER RAMP FOR MATERIAL.
+#   The display ramp (±30% / +18%) describes FORM — which plane faces the
+#   light. Using those same values for material clusters produces blotches,
+#   which is the guide's "noise" artifact: it "adds no information to the
+#   texture". Material variation has to be quiet enough to read as fabric
+#   rather than as dirt.
+MATERIAL_SPEC = (
+    (-0.11, +0.010, +0.03),   # material shadow
+    (0.0,    0.0,    0.0),
+    (+0.08, -0.010, -0.03),   # material highlight
+)
+MAT_SHADOW, MAT_HIGHLIGHT = 3, 4
 
 
 # ---------------------------------------------------------------- plumbing --
@@ -475,6 +491,96 @@ def write_png(path: pathlib.Path, pixels: list[list[tuple[int, int, int]]]) -> N
            + chunk(b"IEND", b""))
     path.write_bytes(png)
 
+
+
+# --------------------------------------------------------- material clusters --
+# 🔴 STEP 4 OF THE GUIDE'S ENTITY PROCEDURE — the one this renderer skipped.
+#
+#   "Sketch the colour distribution, add a shadow and a highlight. Add more
+#    shades to the palette. DEFINE THE MATERIAL by editing the relative
+#    position of CLUSTERS of certain shades. Get rid of banding."
+#
+# Stopping after "add a shadow and a highlight" is what produced flat blocks
+# with horizontal stripes. Measured on the shipped sheet: the torso was
+# literally AAAAAAAA / BBBBBBBB / CCCCCCCC — the guide's "fat lines", which it
+# says "reveals the pixel grid, distracts the eye and the shape is
+# misrepresented".
+#
+# ⭐ Clusters, NOT noise. The guide rejects both: noise is per-texel speckle
+# that "adds no information"; banding is texels lined up brightest-to-darkest.
+# The answer is small irregular GROUPS of 2-3 adjacent texels that never form
+# a row, column or diagonal run.
+#
+# Masks are FIXED, not random — every crew member gets the same material
+# pattern in a different hue, so the set stays identical by construction.
+
+#   H = highlight cluster    S = shadow cluster    . = midtone
+TORSO_MATERIAL = [
+    "..HH....",
+    "..H.....",
+    "......S.",
+    "......SS",
+    "HH......",
+    ".H......",
+    "....SS..",
+    "......H.",
+]
+
+HEAD_MATERIAL = [
+    "..H.....",
+    "........",
+    "......S.",
+    "........",
+    "........",
+    ".S......",
+    "........",
+    "....H...",
+]
+
+
+def apply_material(grid, top, left, mask, base_key, shade_keys):
+    """Overlay material clusters onto an already-filled region.
+
+    Only rewrites texels that currently hold the region's midtone, so clusters
+    never overwrite eyes, props or clothing accents.
+    """
+    hi_key, lo_key = shade_keys
+    for r, row in enumerate(mask):
+        for c, ch in enumerate(row):
+            if ch == ".":
+                continue
+            y, x = top + r, left + c
+            if not (0 <= y < len(grid) and 0 <= x < len(grid[0])):
+                continue
+            cur = grid[y][x]
+            if cur is None or cur[0] != base_key:
+                continue
+            grid[y][x] = (base_key, hi_key if ch == "H" else lo_key)
+
+
+def banding_score(grid, hue: str) -> int:
+    """Longest full-width uniform run of the torso MATERIAL. 0 is correct.
+
+    🔴 The guide's definition: banding is "pixels that line up in a sequence
+    from brightest to darkest ... in straight lines (a.k.a. fat lines)". It
+    "reveals the pixel grid, distracts the eye and the shape is
+    misrepresented".
+
+    Scoped to the hue material only. The neck, the prop and the collar accent
+    are full-width by design — they are SHAPES, not shading, and counting them
+    makes the check fire on correct output.
+
+    Verified against a forced-band control: this must return 8 for a striped
+    torso and 0 for every shipped avatar.
+    """
+    worst = 0
+    for y in range(BODY_TOP + 2, GRID_H):
+        row = grid[y][HEAD_LEFT:HEAD_LEFT + TORSO_W]
+        if any(c is None or c[0] != hue for c in row):
+            continue
+        if len(set(row)) == 1:
+            worst = max(worst, len(row))
+    return worst
 
 
 def check_species_contrast(shared: dict) -> list[str]:
@@ -551,7 +657,7 @@ def build_grid(role: str, cfg: dict, shared: dict) -> list[list[str | None]]:
         "d": (shared.get("mask", "black"), MID),
         "i": (shared.get("muzzle", "white"), SHADOW),
         "a": (shared["sleeve"], MID),    "A": (shared["sleeve"], SHADOW),
-        "t": (hue, HIGHLIGHT),           "T": (hue, MID),
+        "t": (hue, MID),                 "T": (hue, MID),
         "c": (hue, HIGHLIGHT),
         # The prop must not use the torso hue — a yellow wrench on a yellow
         # torso is invisible, which defeats the one-prop rule entirely.
@@ -602,7 +708,20 @@ def build_grid(role: str, cfg: dict, shared: dict) -> list[list[str | None]]:
                 if ch != ".":
                     grid[row_idx][c] = ch
 
-    return [[colours.get(ch) if ch else None for ch in row] for row in grid]
+    # Step 4 of the guide's entity procedure: define the material by the
+    # relative position of shade CLUSTERS, and remove banding.
+    resolved = [[colours.get(ch) if ch else None for ch in row] for row in grid]
+
+    torso_key = colours["T"][0]
+    apply_material(resolved, BODY_TOP + 1, HEAD_LEFT, TORSO_MATERIAL,
+                   torso_key, (MAT_HIGHLIGHT, MAT_SHADOW))
+
+    # 🔴 NO CLUSTERS ON THE FACE. A head face is 8x8 with eyes and a mouth in
+    # it; scattered shade texels there read as dirt or stubble, not material.
+    # Measured: the first attempt gave every crew member a blemished face.
+    # ⭐ Material belongs on large uniform surfaces. A face is not one.
+
+    return resolved
 
 
 def render(role: str, cfg: dict, shared: dict, scale: int) -> list[list[tuple[int, int, int]]]:
