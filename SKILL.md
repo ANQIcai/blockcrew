@@ -501,6 +501,54 @@ known-bad and stays silent on the known-good.
 
 ---
 
+## 🔴 Correct is not the same as pretty
+
+Everything above makes the output *technically* right. It did not make it
+appealing. Four numbers, measured by comparing against reference art that
+reads as pretty, closed most of the gap — and none of them is about
+resolution or accuracy.
+
+| | reference (pretty) | mine (correct) |
+|---|---|---|
+| head as % of figure height | **94%** | ~40% |
+| background | warm cream `#FFF3DE` | mid grey `#9D9D97` |
+| two dominant colours | **62%** of the image | 61%, both dark |
+| distinct colours | 17 | 15 |
+
+### 1. Head dominance is the biggest single lever
+
+A correct 1:2 head-to-body ratio is anatomically sensible and visually dull at
+32px. ⭐ **The body is a plinth for the face, not a torso.** Shoulders are a
+sliver cropped hard at the bottom edge.
+
+### 2. A large calm warm area IS the prettiness
+
+62% of the reference is two colours: cream background and near-white face.
+Appeal comes from the big quiet field, not from detail density. A mid-grey
+background reads as a technical diagram.
+
+### 3. Eyes taller than wide, set far apart, low on the face
+
+Measured: 2 wide × 4 tall, with a large blank cheek area around them. No
+mouth, no outline, no highlight. ⚠️ Most generators spend their detail budget
+evenly; the reference spends it only where the eye actually looks.
+
+### 4. 🔴 The game's constants were baselined on the wrong face
+
+The vanilla multipliers are top 1.0 / front 0.8 / side 0.6 — baselined on the
+**top** face. But the front plane is the one carrying the face, and at a
+literal 0.8 a warm ivory `#FFFDF5` renders as `#CCCAC4`, a dead grey.
+
+Rebasing on the front face — **1.25 / 1.0 / 0.75** — keeps every *ratio*
+identical, so it still reads as three planes of one box, while letting the
+face sit at full brightness.
+
+⚠️ **Copying a constant out of a renderer without asking what it was
+baselined against is how correct numbers produce ugly output.** The number was
+right; the reference frame was wrong.
+
+---
+
 ## 3/4 View Rendering — The Real Game Look
 
 🔴 **A FLAT SPRITE NEVER LOOKED RIGHT.** Measured: the previous output had

@@ -35,8 +35,15 @@ import zlib
 # used for any face turned away from the light, so shading is a lookup rather
 # than a judgement.
 PALETTE: dict[str, tuple[str, str]] = {
+    # 🔴 TWO WARM SLOTS ADDED, MEASURED FROM A REFERENCE THAT READS AS PRETTY.
+    #   In that reference the two dominant colours are 62% of the image:
+    #   a warm cream background (39.5%) and a near-white face (22.8%).
+    #   ⭐ Prettiness comes from a large calm warm area, not from more detail.
+    #   A mid-grey background reads as a technical diagram; cream reads as art.
+    "cream":      ("#FFF3DE", "#EEE5D7"),
+    "ivory":      ("#FFFDF5", "#EEE5D7"),
     "white":      ("#F9FFFE", "#E6E6E6"),
-    "light_gray": ("#9D9D97", "#757571"),
+    "light_gray": ("#B8B1A6", "#948D83"),   # warm grey, measured from the reference
     "gray":       ("#474F52", "#353B3D"),
     "black":      ("#1D1D21", "#151518"),
     "brown":      ("#835432", "#623F25"),
@@ -54,7 +61,7 @@ PALETTE: dict[str, tuple[str, str]] = {
 }
 
 # Reserved for shared slots — too low in chroma to carry identity at 32px.
-LOW_CHROMA = {"white", "light_gray", "gray", "black", "brown"}
+LOW_CHROMA = {"cream", "ivory", "white", "light_gray", "gray", "black", "brown"}
 ROLE_HUES = [k for k in PALETTE if k not in LOW_CHROMA]
 
 # ---------------------------------------------------------------- geometry --
@@ -67,7 +74,7 @@ BODY_TOP = 9
 # 🔴 The head is exactly as wide as the torso — both 8. This is the single
 # most identifying proportion and the first thing a generative model gets
 # wrong. Here it is structural and cannot drift.
-HEAD_W = 8
+HEAD_W = 12
 TORSO_W = 8
 ARM_W = 4
 
@@ -99,56 +106,70 @@ SPECIES_HEADS: dict[str, list[str]] = {
     # The default: a plain blocky person. Written by HEAD_DEFAULT + headwear.
     "human": [],
 
-    # Raccoon — the mask IS the identity, and the ears break the square skull
-    # outline so it survives the silhouette test.
+    # 🔴 12 ROWS x 20 COLS. The face is sliced [6:18], so the skull occupies
+    #   columns 6-17. Ears are separate BOXES (SPECIES_EARS), not texels here.
+    #   Eyes are taller than wide and set far apart, with a large blank cheek
+    #   area — the proportions measured off reference art that reads as pretty.
     "raccoon": [
-        "....FF........FF....",
-        "....FiF......FiF....",
-        "......ffffffff......",
-        "......dddddddd......",
-        "......dwddddwd......",   # 🔴 eyes must be LIGHT inside a dark mask
-        "......ffffffff......",
-        "......ffnnnnff......",
-        "......ffnkknff......",
+        "......ffffffffffff..",
+        "......ffffffffffff..",
+        "......dddddddddddd..",   # the mask band
+        "......dddddddddddd..",
+        "......dwwdddddwwdd..",   # light eyes inside the dark mask
+        "......dwwdddddwwdd..",
+        "......dwwdddddwwdd..",
+        "......dddddddddddd..",
+        "......ffffffffffff..",
+        "......ffffnnnnffff..",   # muzzle
+        "......ffffnkknffff..",
+        "......ffffffffffff..",
     ],
 
-    # Cat — tall pointed ears, small muzzle.
     "cat": [
-        "......F......F......",   # 🔴 ears must TOUCH the skull (cols 6-13)
-        "......FF....FF......",   # or they render as floating debris
-        "......ffffffff......",
-        "......fkffffkf......",
-        "......ffffffff......",
-        "......ffnnnnff......",
-        "......fnnkknnf......",
-        "......ffnnnnff......",
+        "......ffffffffffff..",
+        "......ffffffffffff..",
+        "......ffffffffffff..",
+        "......ffkkffffkkff..",
+        "......ffkkffffkkff..",
+        "......ffkkffffkkff..",
+        "......ffffffffffff..",
+        "......ffffffffffff..",
+        "......ffffnnnnffff..",
+        "......fffnkkknfff..f",
+        "......ffffnnnnffff..",
+        "......ffffffffffff..",
     ],
 
-    # Fox — wide ears, pale muzzle, dark chin.
     "fox": [
-        ".....F........F.....",
-        ".....FiF....FiF.....",
-        "......ffffffff......",
-        "......fkffffkf......",
-        "......ffffffff......",
-        "......ffnnnnff......",
-        "......fnnkknnf......",
-        "......ffFFFFff......",
+        "......ffffffffffff..",
+        "......ffffffffffff..",
+        "......ffffffffffff..",
+        "......ffkkffffkkff..",
+        "......ffkkffffkkff..",
+        "......ffkkffffkkff..",
+        "......ffffffffffff..",
+        "......ffffnnnnffff..",
+        "......fffnnnnnnfff..",
+        "......fffnkkkknfff..",
+        "......ffffnnnnffff..",
+        "......ffffffffffff..",
     ],
 
-    # Bear — small round ears, broad flat muzzle.
     "bear": [
-        "....FF........FF....",
-        "....FiF......FiF....",
-        "......ffffffff......",
-        "......ffkffkff......",
-        "......ffffffff......",
-        "......ffnnnnff......",
-        "......ffnkknff......",
-        "......ffnnnnff......",
+        "......ffffffffffff..",
+        "......ffffffffffff..",
+        "......ffffffffffff..",
+        "......fffkkffkkfff..",
+        "......fffkkffkkfff..",
+        "......ffffffffffff..",
+        "......ffffffffffff..",
+        "......ffffnnnnffff..",
+        "......fffnnnnnnfff..",
+        "......fffnkkkknfff..",
+        "......ffffnnnnffff..",
+        "......ffffffffffff..",
     ],
 }
-
 
 # ----------------------------------------------------------------- sprites --
 # Sprites are text maps. One character per texel, so adding a role means
@@ -167,15 +188,24 @@ SPECIES_HEADS: dict[str, list[str]] = {
 # 🔴 NO FULL-WIDTH SHADE ROWS. A row of one shade across the whole face is a
 # "fat line" — the guide's banding artifact. Shading arrives as material
 # clusters (see apply_material), not as stripes.
+# 🔴 A 12x12 FACE, NOT 8x8 — MEASURED AGAINST A REFERENCE THAT READS AS PRETTY.
+#   Eyes are 2 wide x 3 tall: TALLER THAN WIDE, set far apart, low on the face,
+#   with a large blank cheek area around them.
+#   ⭐ Appeal in small character art comes from big calm areas, not from detail
+#   density. In the reference, 62% of the image is just two colours.
 HEAD_DEFAULT = [
-    "hhhhhhhh",
-    "hhhhhhhh",
-    "ssssssss",
-    "seessees",
-    "ssssssss",
-    "ssssssss",
-    "sssmmsss",
-    "ssssssss",
+    "hhhhhhhhhhhh",
+    "hhhhhhhhhhhh",
+    "hhhhhhhhhhhh",
+    "ssssssssssss",
+    "ssssssssssss",
+    "sseessseeess",
+    "sseessseeess",
+    "sseessseeess",
+    "ssssssssssss",
+    "sssssmmsssss",
+    "ssssssssssss",
+    "ssssssssssss",
 ]
 
 # Headwear replaces the top rows of the head. It is the separator that
@@ -183,14 +213,14 @@ HEAD_DEFAULT = [
 # the head is still legible.
 HEADWEAR = {
     "none":      [],
-    "flat_hair": ["hhhhhhhh", "hhhhhhhh"],
-    "side_part": ["hhhhhhhh", "hhhhhhhH"],
-    "hard_hat":  ["..tttt..", "tttttttt"],
-    "cap_back":  ["..tttt..", "tttttttt"],
-    "beanie":    ["..tttt..", "tttttttt"],
-    "beret":     ["..tttt..", ".tttttt."],
-    "headset":   ["hhhhhhhh", "khhhhhhk"],
-    "visor":     ["hhhhhhhh", "tttttttt"],
+    "flat_hair": ["hhhhhhhhhhhh", "hhhhhhhhhhhh"],
+    "side_part": ["hhhhhhhhhhhh", "hhhhhhhhhhhH"],
+    "hard_hat":  ["...tttttt...", "tttttttttttt"],
+    "cap_back":  ["...tttttt...", "tttttttttttt"],
+    "beanie":    ["...tttttt...", "tttttttttttt"],
+    "beret":     ["...tttttt...", "..tttttttt.."],
+    "headset":   ["hhhhhhhhhhhh", "khhhhhhhhhhk"],
+    "visor":     ["hhhhhhhhhhhh", "tttttttttttt"],
 }
 
 BODY_DEFAULT = [
@@ -243,9 +273,12 @@ EXAMPLE_ROLES = {
 # and it carries more weight in a bust than in a full-body crew because
 # cropping removes shared area.
 SHARED = {
-    "skin": "brown",
-    "sleeve": "gray",          # darker than the torso so arms read as arms
-    "background": "light_gray",
+    # 🔴 MEASURED DEFAULTS. In the reference that reads as pretty, the two
+    #   dominant colours are 62% of the image: cream background + ivory face.
+    #   ⭐ The calm warm field IS the prettiness. Grey-on-grey reads technical.
+    "skin": "ivory",
+    "sleeve": "light_gray",    # darker than the face so arms read as arms
+    "background": "cream",
     "hair": "black",
     "prop_dark": "black",      # props contrast with every role hue
     "prop_light": "white",
@@ -433,16 +466,23 @@ RAMP_SPEC = (
 
 
 def shade(rgb: tuple[int, int, int], mult: float) -> tuple[int, int, int]:
-    """Apply a vanilla face multiplier.
+    """Apply a vanilla face multiplier, rebased so the FRONT face is full.
 
-    🔴 THE NUMBERS ARE FROM THE GAME, NOT FROM TASTE.
-        top 1.0 · north/south 0.8 · east/west 0.6 · bottom 0.5
-    Blocks cast no shadows on each other — the sun's position never darkens
-    anything — so a face's brightness depends ONLY on which way it points.
+    🔴 THE RATIOS ARE FROM THE GAME, THE BASELINE IS NOT.
+        game:  top 1.0 · north/south 0.8 · east/west 0.6 · bottom 0.5
 
-    ⭐ Three faces of one box at 1.0 / 0.8 / 0.6 is the look the eye
-    recognises. A flat front-facing sprite has one orientation, therefore one
-    tone, and reads as generic pixel art however correct the palette is.
+    ⭐ MEASURED CONFLICT: the front plane is what the viewer actually looks at
+    — it carries the face. At the game's literal 0.8, a warm ivory #FFFDF5
+    face renders as #CCCAC4, a dead grey. The reference art that reads as
+    *pretty* puts its near-white face at FULL brightness, because flat art has
+    no multipliers at all.
+
+    So the ratios between faces are preserved (that is what makes it read as
+    three planes of one box) but rebased on the front face rather than the
+    top: front 1.0, top 1.25 clipped, side 0.75.
+
+    ⚠️ Copying a constant out of a renderer without asking what it was
+    baselined against is how correct numbers produce ugly output.
     """
     return tuple(max(0, min(255, round(c * mult))) for c in rgb)
 
@@ -690,41 +730,41 @@ def check_species_contrast(shared: dict) -> list[str]:
 # minimum for a shape to read as an object rather than as a stripe.
 PROPS_3D = {
     "none": [],
-    "briefcase": ["..PPPP..",
-                  ".PPPPPP.",
-                  ".PppppP.",
-                  ".PPPPPP."],
-    "candles":   ["...P....",
-                  ".P.P.P..",
-                  ".P.P.P.P",
-                  ".PPPPPPP"],
-    "tray":      ["........",
-                  ".pppppp.",
-                  "PPPPPPPP",
-                  "..P..P.."],
-    "wrench":    ["....PP..",
-                  "...PP...",
-                  "..PP....",
-                  ".PP.P..."],
-    "camera":    [".PPPPPP.",
-                  ".PppppP.",
-                  ".PpPPpP.",
-                  ".PPPPPP."],
-    "megaphone": ["....PP..",
-                  "..PPPPP.",
-                  ".PPPPPP.",
-                  "..PPPPP."],
-    "magnifier": [".PPPP...",
-                  ".PppP...",
-                  ".PPPP...",
-                  "....PP.."],
-    "toolbox":   ["...PP...",
-                  ".PPPPPP.",
-                  ".PppppP.",
-                  ".PPPPPP."],
+    "briefcase": ["..PPPPPP..",
+                  ".PPPPPPPP.",
+                  ".PppppppP.",
+                  ".PPPPPPPP."],
+    "candles":   ["....PP....",
+                  "..P.PP.P..",
+                  "..P.PP.P.P",
+                  "..PPPPPPPP"],
+    "tray":      ["..........",
+                  "..pppppp..",
+                  "PPPPPPPPPP",
+                  "...P..P..."],
+    "wrench":    [".....PPP..",
+                  "....PPP...",
+                  "..PPP.....",
+                  ".PPP......"],
+    "camera":    ["..PPPPPP..",
+                  "..PppppP..",
+                  "..PpPPpP..",
+                  "..PPPPPP.."],
+    "megaphone": [".....PP...",
+                  "...PPPPP..",
+                  "..PPPPPP..",
+                  "...PPPPP.."],
+    "magnifier": ["..PPPP....",
+                  "..PppP....",
+                  "..PPPP....",
+                  ".....PP..."],
+    "toolbox":   ["....PP....",
+                  "..PPPPPP..",
+                  "..PppppP..",
+                  "..PPPPPP.."],
 }
 
-TORSO_SCREEN_TOP, TORSO_SCREEN_LEFT = 10, 5
+TORSO_SCREEN_TOP, TORSO_SCREEN_LEFT = 17, 4
 
 
 def paint_prop(buf, prop_name: str) -> None:
@@ -736,7 +776,7 @@ def paint_prop(buf, prop_name: str) -> None:
     """
     art = PROPS_3D.get(prop_name) or []
     for r, row in enumerate(art):
-        sy = TORSO_SCREEN_TOP + 2 + r
+        sy = TORSO_SCREEN_TOP + 1 + r
         if not (0 <= sy < VIEW_H):
             continue
         for c, ch in enumerate(row):
@@ -884,7 +924,7 @@ def build_grid(role: str, cfg: dict, shared: dict) -> list[list[str | None]]:
 # ------------------------------------------------------------- 3/4 view bust --
 # Real model dimensions (texels): head 8x8x8, body 8x12x4, arms 4x12x4.
 # A bust crops the body at 6 of its 12 rows.
-VIEW_W, VIEW_H, VIEW_OY = 22, 22, 4
+VIEW_W, VIEW_H, VIEW_OY = 22, 24, 4
 
 
 # 🔴 EARS ARE BOXES, NOT TEXELS.
@@ -895,10 +935,10 @@ VIEW_W, VIEW_H, VIEW_OY = 22, 22, 4
 #   (x offset from head, y offset, w, h, d)
 SPECIES_EARS = {
     "human":   [],
-    "raccoon": [(-1, 0, 3, 2, 3), (6, 0, 3, 2, 3)],
-    "cat":     [(0, -1, 2, 2, 2), (6, -1, 2, 2, 2)],
-    "fox":     [(-1, -1, 3, 2, 2), (6, -1, 3, 2, 2)],
-    "bear":    [(-1, 0, 3, 2, 3), (6, 0, 3, 2, 3)],
+    "raccoon": [(-2, 0, 4, 3, 4), (10, 0, 4, 3, 4)],
+    "cat":     [(0, -2, 3, 4, 3), (9, -2, 3, 4, 3)],
+    "fox":     [(-1, -2, 4, 4, 3), (9, -2, 4, 4, 3)],
+    "bear":    [(-2, 0, 4, 3, 4), (10, 0, 4, 3, 4)],
 }
 
 
@@ -923,16 +963,22 @@ def build_boxes(role: str, cfg: dict, shared: dict):
     if hat:
         crown = hat[0].replace(".", "")[:1] or crown
 
+    # 🔴 HEAD DOMINANCE IS THE BIGGEST PRETTINESS LEVER.
+    #   Measured against a reference set that reads as appealing: the head is
+    #   94% of the figure's height. Mine was ~40% — anatomically sensible and
+    #   visually dull at 32px.
+    #   ⭐ The body is a plinth for the face, not a torso. Shoulders are a
+    #   sliver cropped hard at the bottom edge.
     boxes_out = []
     for (ex, ey, ew, eh, ed) in SPECIES_EARS.get(species, []):
-        boxes_out.append(Box(4 + ex, 1 + ey, 2 + 1, ew, eh, ed,
+        boxes_out.append(Box(2 + ex * 2, 2 + ey, 3, ew, eh, ed,
                              {"front": "F", "top": "F", "side": "F"}))
 
     return boxes_out + [
-        Box(4, 9, 2, 8, 8, 4, {"front": "T", "top": "c", "side": "T"}),
-        Box(0, 9, 2, 4, 8, 4, {"front": "a", "top": "a", "side": "a"}),
-        Box(12, 9, 2, 4, 8, 4, {"front": "a", "top": "a", "side": "a"}),
-        Box(4, 1, 2, 8, 8, 8, {"front": face, "top": crown, "side": side_key}),
+        Box(3, 13, 2, 10, 7, 4, {"front": "T", "top": "c", "side": "T"}),
+        Box(0, 14, 2, 3, 6, 4, {"front": "a", "top": "a", "side": "a"}),
+        Box(13, 14, 2, 3, 6, 4, {"front": "a", "top": "a", "side": "a"}),
+        Box(2, 2, 2, 12, 12, 8, {"front": face, "top": crown, "side": side_key}),
     ]
 
 

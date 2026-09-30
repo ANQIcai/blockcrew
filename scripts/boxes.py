@@ -30,7 +30,13 @@ pixel per texel, giving a consistent 2:1 staircase on the diagonals.
 """
 
 # Vanilla face multipliers.
-FACE_TOP, FACE_FRONT, FACE_SIDE, FACE_BOTTOM = 1.0, 0.8, 0.6, 0.5
+# 🔴 REBASED ON THE FRONT FACE, ratios preserved.
+#   Game constants are top 1.0 / front 0.8 / side 0.6 / bottom 0.5, baselined
+#   on the TOP face. But the front plane is the one carrying the face, and at
+#   a literal 0.8 a warm ivory #FFFDF5 renders #CCCAC4 — a dead grey.
+#   Dividing through by 0.8 keeps every RATIO identical (so it still reads as
+#   three planes of one box) while letting the face sit at full brightness.
+FACE_TOP, FACE_FRONT, FACE_SIDE, FACE_BOTTOM = 1.25, 1.0, 0.75, 0.625
 
 
 class Box:
