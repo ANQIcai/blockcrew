@@ -248,4 +248,61 @@ Borrow the aesthetic, never the vocabulary.
 
 ## Licence
 
-MIT. Do what you like with it.
+MIT. Do what you like with it.## Real 3D Rendering — The Vanilla Game Look
+
+🔴 **A flat sprite never looked right.** The previous output had horizontal
+banding — `AAAAAAAA / BBBBBBBB / CCCCCCCC` rows on the torso — the style
+guide's *"pixels lined up brightest to darkest in straight lines, reveals the
+pixel grid, misrepresents the shape."*
+
+The problem was not palette correctness. A vanilla character is **six boxes
+seen at an angle**, and the game shades every face by a fixed multiplier
+decided purely by which way it points:
+
+| face | multiplier |
+|------|------------|
+| top | **1.0** |
+| north / south | **0.8** |
+| east / west | **0.6** |
+| bottom | **0.5** |
+
+⭐ **Those numbers are constants in the game renderer, not artistic choices.**
+Blocks cast no shadows on each other — the sun's position never darkens
+anything — so a face's brightness depends ONLY on its orientation.
+
+The renderer composes the bust as four boxes (head, torso, two arms), each
+with three visible faces at 1.0 / 0.8 / 0.6. The result is a 3D blocky
+character with the head's top and side visible, the torso's top and side
+visible, and the arms showing depth.
+
+### Real Model Dimensions
+
+| part | w × h × d | distinct face sizes |
+|------|-----------|---------------------|
+| head | 8 × 8 × 8 | **1** — all six faces identical (the only cube) |
+| body | 8 × 12 × 4 | **3** — 8×12, 4×12, 8×4 |
+| arms | 4 × 12 × 4 | 2 — 4×12, 4×4 |
+
+A bust crops the body at 6 of its 12 rows.
+
+### Cabinet Oblique Projection
+
+Half a pixel right and up per unit of depth. The front face stays an exact
+rectangle, which keeps the eyes and mouth crisp. An isometric view shears the
+face and at 8 texels wide there is no detail left to shear.
+
+### Three Faces of One Box = The Look
+
+⭐ **Three faces of one box at 1.0 / 0.8 / 0.6 is what the eye recognises.**
+A flat front-facing sprite has exactly one orientation, therefore one tone,
+and reads as generic pixel art no matter how correct the palette is.
+
+### Ears Are Boxes, Not Texels
+
+In a 3D model an ear is a separate cuboid with its own three faces. Species
+ears are rendered as boxes offset from the head, with their own front/top/side
+faces shaded by the same multipliers.
+
+---
+
+

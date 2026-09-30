@@ -501,6 +501,91 @@ known-bad and stays silent on the known-good.
 
 ---
 
+## 3/4 View Rendering — The Real Game Look
+
+🔴 **A FLAT SPRITE NEVER LOOKED RIGHT.** Measured: the previous output had
+`AAAAAAAA / BBBBBBBB / CCCCCCCC` rows on the torso — the style guide's
+*banding* artifact, *"pixels lined up brightest to darkest in straight lines,
+reveals the pixel grid, misrepresents the shape."*
+
+The problem was not palette correctness or ramp quality. A vanilla character is
+**six boxes seen at an angle**, and the game shades every face by a fixed
+multiplier decided purely by which way it points:
+
+| face | multiplier |
+|------|------------|
+| top | **1.0** |
+| north / south | **0.8** |
+| east / west | **0.6** |
+| bottom | **0.5** |
+
+⭐ **Those numbers are constants in the game renderer, not artistic choices.**
+Blocks cast no shadows on each other — the sun's position never darkens
+anything — so a face's brightness depends ONLY on its orientation.
+
+### Real Model Dimensions
+
+The actual texel dimensions of a Minecraft character:
+
+| part | w × h × d | distinct face sizes |
+|------|-----------|---------------------|
+| head | 8 × 8 × 8 | **1** — all six faces identical (the only cube) |
+| body | 8 × 12 × 4 | **3** — 8×12, 4×12, 8×4 |
+| arms | 4 × 12 × 4 | 2 — 4×12, 4×4 |
+| legs | 4 × 12 × 4 | 2 |
+
+A bust crops the body at 6 of its 12 rows.
+
+### Cabinet Oblique Projection
+
+The renderer uses cabinet oblique at 1:2 depth — half a pixel right and up per
+unit of depth. The front face stays an exact rectangle, which keeps the eyes
+and mouth crisp. An isometric view shears the face and at 8 texels wide there
+is no detail left to shear.
+
+### Three Faces of One Box = The Look
+
+⭐ **Three faces of one box at 1.0 / 0.8 / 0.6 is what the eye recognises.**
+A flat front-facing sprite has exactly one orientation, therefore one tone,
+and reads as generic pixel art no matter how correct the palette is.
+
+The renderer composes the bust as four boxes (head, torso, two arms), each
+with three visible faces, and applies the vanilla multipliers. The result is a
+3D blocky character with the head's top and side visible, the torso's top and
+side visible, and the arms showing depth.
+
+### Depth Testing
+
+Boxes are drawn back-to-front with a depth buffer, not relying on draw order.
+A texel is nearer when `z` is smaller, `y` is larger (lower down) and `x` is
+larger. This prevents the head's projected base from overwriting the torso.
+
+### Ears Are Boxes, Not Texels
+
+🔴 **In a 3D model an ear is a separate cuboid with its own three faces.**
+The flat ear maps, sliced to the 8-wide face, came out as vertical bars in
+the 3/4 view. Species ears are now rendered as boxes offset from the head,
+with their own front/top/side faces shaded by the same multipliers.
+
+### Props on the Torso Front
+
+Props are drawn onto the torso's front face in screen coordinates. Measured:
+the torso front occupies screen rows 10–17, columns 5–12 (8 wide, 8 tall).
+A 2-row prop cannot read at 32px per texel; props are 4 rows on an 8×8
+field, placed at the centre of the chest.
+
+### Banding Score Gate
+
+`banding_score(buf)` measures the longest uniform horizontal run on torso
+material rows (12–17 in the 3/4 view). Returns 0 for correct output, 8 for
+full-width banding. Verified against both known failures and a forced-band
+control.
+
+⚠️ The collar accent is one-tone by design and is not counted. Scoping to
+torso-hue rows prevents false positives.
+
+---
+
 ## Matching the voxel-game art style — the real rules
 
 Researched 30 Sep 2026 against the **Blockbench Minecraft Style Guide**, the

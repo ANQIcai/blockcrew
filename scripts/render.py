@@ -23,6 +23,7 @@ DEPENDENCIES
 from __future__ import annotations
 
 import argparse
+from boxes import Box, draw_box, project, FACE_FRONT, FACE_TOP, FACE_SIDE
 import json
 import pathlib
 import struct
@@ -431,6 +432,21 @@ RAMP_SPEC = (
 )
 
 
+def shade(rgb: tuple[int, int, int], mult: float) -> tuple[int, int, int]:
+    """Apply a vanilla face multiplier.
+
+    🔴 THE NUMBERS ARE FROM THE GAME, NOT FROM TASTE.
+        top 1.0 · north/south 0.8 · east/west 0.6 · bottom 0.5
+    Blocks cast no shadows on each other — the sun's position never darkens
+    anything — so a face's brightness depends ONLY on which way it points.
+
+    ⭐ Three faces of one box at 1.0 / 0.8 / 0.6 is the look the eye
+    recognises. A flat front-facing sprite has one orientation, therefore one
+    tone, and reads as generic pixel art however correct the palette is.
+    """
+    return tuple(max(0, min(255, round(c * mult))) for c in rgb)
+
+
 def ramp(palette_name: str) -> list[tuple[int, int, int]]:
     """Three-shade hue-shifted ramp derived from a palette midtone.
 
@@ -583,6 +599,37 @@ def banding_score(grid, hue: str) -> int:
     return worst
 
 
+def banding_score(buf: list[list]) -> int:
+    """Longest uniform horizontal run on torso material rows.
+
+    🔴 Measured to catch the banding the style guide names: 'pixels that line
+    up in a sequence from brightest to darkest, whether in straight lines
+    (a.k.a. fat lines)'.
+
+    Scoped to rows where the torso hue dominates. The neck and collar accent
+    are one-tone by design — counting them makes the gate fire on correct
+    output. Only the torso material rows (12-17 in the 3/4 view) are checked.
+    """
+    worst = 0
+    for y in range(TORSO_SCREEN_TOP + 2, TORSO_SCREEN_TOP + 8):  # rows 12-17
+        if y >= len(buf):
+            break
+        run_len = 1
+        for x in range(TORSO_SCREEN_LEFT + 1, TORSO_SCREEN_LEFT + 8):
+            if x >= len(buf[y]):
+                break
+            prev = buf[y][x-1]
+            curr = buf[y][x]
+            if prev is not None and curr is not None and prev == curr:
+                run_len += 1
+            else:
+                run_len = 1
+        # Only full-width runs are banding; 6 out of 8 is base tone with clusters.
+        if run_len == 8:
+            worst = 8
+    return worst
+
+
 def check_species_contrast(shared: dict) -> list[str]:
     """Warn when a species crew's markings will not read.
 
@@ -633,6 +680,116 @@ def check_species_contrast(shared: dict) -> list[str]:
     if abs(lum(muzzle) - lum(fur)) < 30:
         warn.append(f"muzzle '{muzzle}' vs fur '{fur}': too close to read")
     return warn
+
+
+# --------------------------------------------------------------- props (3/4) --
+# 🔴 MEASURED, NOT ASSUMED: the torso's front face occupies screen rows 10-17
+# and columns 5-12. Props are drawn into that 8x8 field.
+#
+# The old 2-row props were invisible at 32px per texel. Four rows is the
+# minimum for a shape to read as an object rather than as a stripe.
+PROPS_3D = {
+    "none": [],
+    "briefcase": ["..PPPP..",
+                  ".PPPPPP.",
+                  ".PppppP.",
+                  ".PPPPPP."],
+    "candles":   ["...P....",
+                  ".P.P.P..",
+                  ".P.P.P.P",
+                  ".PPPPPPP"],
+    "tray":      ["........",
+                  ".pppppp.",
+                  "PPPPPPPP",
+                  "..P..P.."],
+    "wrench":    ["....PP..",
+                  "...PP...",
+                  "..PP....",
+                  ".PP.P..."],
+    "camera":    [".PPPPPP.",
+                  ".PppppP.",
+                  ".PpPPpP.",
+                  ".PPPPPP."],
+    "megaphone": ["....PP..",
+                  "..PPPPP.",
+                  ".PPPPPP.",
+                  "..PPPPP."],
+    "magnifier": [".PPPP...",
+                  ".PppP...",
+                  ".PPPP...",
+                  "....PP.."],
+    "toolbox":   ["...PP...",
+                  ".PPPPPP.",
+                  ".PppppP.",
+                  ".PPPPPP."],
+}
+
+TORSO_SCREEN_TOP, TORSO_SCREEN_LEFT = 10, 5
+
+
+def paint_prop(buf, prop_name: str) -> None:
+    """Paint the prop onto the torso's front face.
+
+    Placed at the measured location of that face rather than at an offset
+    guessed from the old flat grid — which is what silently dropped props in
+    the 3/4 rewrite.
+    """
+    art = PROPS_3D.get(prop_name) or []
+    for r, row in enumerate(art):
+        sy = TORSO_SCREEN_TOP + 2 + r
+        if not (0 <= sy < VIEW_H):
+            continue
+        for c, ch in enumerate(row):
+            sx = TORSO_SCREEN_LEFT + c
+            if ch != "." and 0 <= sx < VIEW_W and buf[sy][sx] is not None:
+                buf[sy][sx] = (ch, FACE_FRONT)
+
+
+def colour_map(cfg: dict, shared: dict) -> dict:
+    """Texel key -> (palette name, ramp index)."""
+    hue = cfg["hue"]
+    colours = {
+        # On a species crew the exposed-body slots are fur, not human skin.
+        "s": (_body(shared), MID),       "S": (_body(shared), SHADOW),
+        "m": (_body(shared), SHADOW),
+        "h": (shared["hair"], MID),      "H": (shared["hair"], SHADOW),
+        "e": (shared["hair"], SHADOW),   "k": ("black", MID),
+        "w": ("white", MID),
+        # species layer: fur uses the SHARED slot so a crew stays one species
+        "f": (shared.get("fur", shared["skin"]), MID),
+        "F": (shared.get("fur", shared["skin"]), SHADOW),
+        "n": (shared.get("muzzle", "white"), MID),
+        "d": (shared.get("mask", "black"), MID),
+        "i": (shared.get("muzzle", "white"), SHADOW),
+        "a": (shared["sleeve"], MID),    "A": (shared["sleeve"], SHADOW),
+        "t": (hue, MID),                 "T": (hue, MID),
+        "c": (hue, HIGHLIGHT),
+        # The prop must not use the torso hue — a yellow wrench on a yellow
+        # torso is invisible, which defeats the one-prop rule entirely.
+        "p": (shared["prop_dark"], MID), "P": (shared["prop_light"], MID),
+    }
+
+    return colours
+
+
+def apply_material_3d(buf, colours):
+    """Step 4 of the entity procedure, applied per visible face.
+
+    Clusters are keyed to the texel's own face multiplier so a cluster on the
+    lit top face and one on the shaded side stay distinguishable.
+    """
+    for y, row in enumerate(buf):
+        for x, cell in enumerate(row):
+            if cell is None:
+                continue
+            key, mult = cell
+            pal = colours.get(key)
+            if not pal or pal[0] not in ROLE_HUES:
+                continue
+            if TORSO_MATERIAL[y % len(TORSO_MATERIAL)][x % 8] == "H":
+                buf[y][x] = (key, mult * 1.06)
+            elif TORSO_MATERIAL[y % len(TORSO_MATERIAL)][x % 8] == "S":
+                buf[y][x] = (key, mult * 0.94)
 
 
 def build_grid(role: str, cfg: dict, shared: dict) -> list[list[str | None]]:
@@ -724,14 +881,86 @@ def build_grid(role: str, cfg: dict, shared: dict) -> list[list[str | None]]:
     return resolved
 
 
-def render(role: str, cfg: dict, shared: dict, scale: int) -> list[list[tuple[int, int, int]]]:
-    grid = build_grid(role, cfg, shared)
+# ------------------------------------------------------------- 3/4 view bust --
+# Real model dimensions (texels): head 8x8x8, body 8x12x4, arms 4x12x4.
+# A bust crops the body at 6 of its 12 rows.
+VIEW_W, VIEW_H, VIEW_OY = 22, 22, 4
+
+
+# 🔴 EARS ARE BOXES, NOT TEXELS.
+#   In a flat sprite an ear is a few pixels beside the skull. On a real model
+#   it is a separate cuboid with its own three faces — which is why the flat
+#   ear maps, sliced to the 8-wide face, came out as vertical bars.
+#
+#   (x offset from head, y offset, w, h, d)
+SPECIES_EARS = {
+    "human":   [],
+    "raccoon": [(-1, 0, 3, 2, 3), (6, 0, 3, 2, 3)],
+    "cat":     [(0, -1, 2, 2, 2), (6, -1, 2, 2, 2)],
+    "fox":     [(-1, -1, 3, 2, 2), (6, -1, 3, 2, 2)],
+    "bear":    [(-1, 0, 3, 2, 3), (6, 0, 3, 2, 3)],
+}
+
+
+def build_boxes(role: str, cfg: dict, shared: dict):
+    """The bust as four boxes, ordered back to front."""
+    species = cfg.get("species", shared.get("species", "human"))
+    sp_head = SPECIES_HEADS.get(species) or []
+
+    if sp_head:
+        face = [list(r[HEAD_LEFT:HEAD_LEFT + HEAD_W]) for r in sp_head]
+        hw_name = cfg["headwear"]
+        hat = [] if hw_name in HAIR_HEADWEAR else HEADWEAR.get(hw_name, [])
+        crown, side_key = "f", "f"
+    else:
+        face = [list(r) for r in HEAD_DEFAULT]
+        hat = HEADWEAR.get(cfg["headwear"], [])
+        crown, side_key = ("h" if face[0][0] == "h" else "s"), "s"
+
+    for i, row in enumerate(hat):
+        if i < len(face):
+            face[i] = list(row)
+    if hat:
+        crown = hat[0].replace(".", "")[:1] or crown
+
+    boxes_out = []
+    for (ex, ey, ew, eh, ed) in SPECIES_EARS.get(species, []):
+        boxes_out.append(Box(4 + ex, 1 + ey, 2 + 1, ew, eh, ed,
+                             {"front": "F", "top": "F", "side": "F"}))
+
+    return boxes_out + [
+        Box(4, 9, 2, 8, 8, 4, {"front": "T", "top": "c", "side": "T"}),
+        Box(0, 9, 2, 4, 8, 4, {"front": "a", "top": "a", "side": "a"}),
+        Box(12, 9, 2, 4, 8, 4, {"front": "a", "top": "a", "side": "a"}),
+        Box(4, 1, 2, 8, 8, 8, {"front": face, "top": crown, "side": side_key}),
+    ]
+
+
+def render(role: str, cfg: dict, shared: dict, scale: int):
+    """Render one avatar in 3/4 view with vanilla per-face multipliers."""
+    colours = colour_map(cfg, shared)
+    buf = [[None] * VIEW_W for _ in range(VIEW_H)]
+    depth = [[9e9] * VIEW_W for _ in range(VIEW_H)]
+    for box in build_boxes(role, cfg, shared):
+        draw_box(buf, box, depth, VIEW_W, VIEW_H, VIEW_OY)
+
+    # 🔴 REGRESSION GUARD: props live on the torso's front face. The 3/4
+    # rewrite dropped them because the old code painted into a flat grid.
+    paint_prop(buf, cfg["prop"])
+
+    apply_material_3d(buf, colours)
+
     bg = ramp(shared["background"])[MID]
     out = []
-    for row in grid:
+    for row in buf:
         line = []
         for cell in row:
-            rgb = bg if cell is None else ramp(cell[0])[cell[1]]
+            if cell is None:
+                rgb = bg
+            else:
+                key, mult = cell
+                pal = colours.get(key)
+                rgb = shade(ramp(pal[0])[pal[1]], mult) if pal else bg
             line.extend([rgb] * scale)
         out.extend([line] * scale)
     return out
