@@ -46,6 +46,69 @@ the pixels instead of asking a model to approximate them.
 
 ---
 
+## A crew does not have to be human
+
+Swap the head, keep every other rule. The shared-slot architecture is
+species-agnostic — same geometry, same ramps, same one-prop rule.
+
+```sh
+python3 scripts/render.py --species raccoon \
+    --fur brown --muzzle white --mask black --background light_gray \
+    --roster my-crew.json --out avatars/
+```
+
+**Raccoon crew** — the mask is the identity, and the ears break the square
+skull so it still survives the silhouette test:
+
+![raccoon crew](assets/example-crew-raccoon.png)
+
+**Cat crew** — same six roles, same props, different species:
+
+![cat crew](assets/example-crew-cat.png)
+
+Built in: `human` (default), `raccoon`, `cat`, `fox`, `bear`. Adding one is a
+single 20×8 text block in `SPECIES_HEADS` — which is the point of a sprite
+table over a prompt.
+
+### 🔴 Two contrast pairs, not one
+
+Species crews fail in a way human ones don't, and the renderer now checks for
+it. Measured across three renders (luminance difference, 0–255):
+
+| fur / background | fur–bg | mask–fur | mask–bg | result |
+|---|---|---|---|---|
+| light grey on grey | 79 | 127 | 48 | washed out |
+| light grey on black | 127 | 127 | 0 | mask lost |
+| brown on light grey | 65 | 62 | **127** | reads |
+
+⭐ **The combination that works has the LOWEST fur-vs-background contrast of
+the three.** The first check written here tested exactly that pair, passed
+every failing case, and was therefore decoration rather than a gate.
+
+The pairs that actually decide it:
+
+1. **mask vs background** — the mask band spans the full head width, so it
+   touches the silhouette edge. Match the background and the outline breaks
+   there; the face detaches from the skull.
+2. **mask vs fur, as a band not a floor** — too little and the marking
+   vanishes, too much and the mask reads as the whole head instead of a
+   stripe across it. Both failures measured 127; the one that reads is 62.
+
+`check_species_contrast()` is verified against those three cases plus a human
+control: it must fire on the two known failures and stay silent on the two
+known-good ones.
+
+### ⚠️ On licensed characters
+
+This skill will not reproduce a named character from an existing franchise.
+Style is not protectable; specific characters are, and the ones people ask
+for are usually owned by companies whose business *is* licensing.
+
+**What it does instead:** the generic animal, the palette, the shape language
+— from which you can build something that is yours to publish.
+
+---
+
 ## Why a crew, not a mascot
 
 Most avatar generators make **one** character. That is a different, easier

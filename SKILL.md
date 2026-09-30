@@ -464,6 +464,43 @@ Image models default to polished output. The words that matter:
 and upscale — that softens edges and destroys the only quality this section
 exists to produce.
 
+## Species — a crew of animals, not only people
+
+`--species raccoon|cat|fox|bear` swaps the head map and leaves every other
+rule untouched: same geometry, same hue-shifted ramps, same one-prop rule,
+same shared neutral.
+
+**Shared slots become fur slots.** `--fur`, `--muzzle`, `--mask` replace skin
+and hair; the neck and any exposed body use fur, not human skin.
+
+🔴 **Hair-type headwear is suppressed on an animal head.** `flat_hair`,
+`side_part`, `headset` and `visor` paint a helmet over the ears and destroy
+the silhouette. Real hats (`hard_hat`, `beret`, `cap_back`, `beanie`) still
+apply.
+
+🔴 **Ears must touch the skull.** Ears written outside columns 6–13 with a gap
+render as floating debris beside the head — measured, not theorised.
+
+### Two contrast pairs decide whether a species crew reads
+
+| fur / background | fur–bg | mask–fur | mask–bg | result |
+|---|---|---|---|---|
+| light grey on grey | 79 | 127 | 48 | washed out |
+| light grey on black | 127 | 127 | 0 | mask lost |
+| brown on light grey | 65 | 62 | **127** | reads |
+
+⭐ **The working combination has the lowest fur-vs-background contrast.** A
+gate that checks fur-vs-background passes every failing case. The
+discriminating pairs are **mask vs background** (the mask spans the full head
+width, so it touches the silhouette edge) and **mask vs fur as a band** — too
+close and the marking vanishes, too far and the mask becomes the whole head.
+
+⚠️ **A contrast rule invented from intuition will pass its own failures.**
+Calibrate it against renders you have looked at, then verify it fires on the
+known-bad and stays silent on the known-good.
+
+---
+
 ## Matching the voxel-game art style — the real rules
 
 Researched 30 Sep 2026 against the **Blockbench Minecraft Style Guide**, the

@@ -70,6 +70,85 @@ HEAD_W = 8
 TORSO_W = 8
 ARM_W = 4
 
+
+# ------------------------------------------------------------------ species --
+# 🔴 A crew does not have to be human. The shared-slot architecture is
+# species-agnostic: swap the head map and the same rules produce a crew of
+# animals, robots or creatures.
+#
+# Species heads are written across the FULL canvas width (20) because ears and
+# muzzles sit outside the 8-texel skull. Rows are 8 tall, same as a human head.
+#
+#   f/F  fur base / fur shadow      n  muzzle (light)
+#   e    eye        k  black         w  white
+#   d    dark mask patch             i  inner ear
+
+# Headwear that is HAIR rather than a hat. Never applied to an animal head.
+HAIR_HEADWEAR = {"none", "flat_hair", "side_part", "headset", "visor"}
+
+
+def _body(shared: dict) -> str:
+    """The exposed-body material: fur on a species crew, skin on a human one."""
+    if shared.get("species", "human") != "human":
+        return shared.get("fur", shared["skin"])
+    return shared["skin"]
+
+
+SPECIES_HEADS: dict[str, list[str]] = {
+    # The default: a plain blocky person. Written by HEAD_DEFAULT + headwear.
+    "human": [],
+
+    # Raccoon — the mask IS the identity, and the ears break the square skull
+    # outline so it survives the silhouette test.
+    "raccoon": [
+        "....FF........FF....",
+        "....FiF......FiF....",
+        "......ffffffff......",
+        "......dddddddd......",
+        "......dwddddwd......",   # 🔴 eyes must be LIGHT inside a dark mask
+        "......ffffffff......",
+        "......ffnnnnff......",
+        "......ffnkknff......",
+    ],
+
+    # Cat — tall pointed ears, small muzzle.
+    "cat": [
+        "......F......F......",   # 🔴 ears must TOUCH the skull (cols 6-13)
+        "......FF....FF......",   # or they render as floating debris
+        "......ffffffff......",
+        "......fkffffkf......",
+        "......ffffffff......",
+        "......ffnnnnff......",
+        "......fnnkknnf......",
+        "......ffnnnnff......",
+    ],
+
+    # Fox — wide ears, pale muzzle, dark chin.
+    "fox": [
+        ".....F........F.....",
+        ".....FiF....FiF.....",
+        "......ffffffff......",
+        "......fkffffkf......",
+        "......ffffffff......",
+        "......ffnnnnff......",
+        "......fnnkknnf......",
+        "......ffFFFFff......",
+    ],
+
+    # Bear — small round ears, broad flat muzzle.
+    "bear": [
+        "....FF........FF....",
+        "....FiF......FiF....",
+        "......ffffffff......",
+        "......ffkffkff......",
+        "......ffffffff......",
+        "......ffnnnnff......",
+        "......ffnkknff......",
+        "......ffnnnnff......",
+    ],
+}
+
+
 # ----------------------------------------------------------------- sprites --
 # Sprites are text maps. One character per texel, so adding a role means
 # adding a small block of text rather than editing code.
@@ -397,6 +476,59 @@ def write_png(path: pathlib.Path, pixels: list[list[tuple[int, int, int]]]) -> N
     path.write_bytes(png)
 
 
+
+def check_species_contrast(shared: dict) -> list[str]:
+    """Warn when a species crew's markings will not read.
+
+    🔴 CALIBRATED AGAINST MEASURED FAILURES, not intuition. Three renders,
+    luminance differences in the 0-255 range:
+
+        combination                        fur-bg  mask-fur  mask-bg   verdict
+        light_gray fur / gray bg             79      127       48      washed out
+        light_gray fur / black bg           127      127        0      mask lost
+        brown fur / light_gray bg            65       62      127      reads
+
+    ⭐ The combination that READS has the LOWEST fur-vs-background contrast of
+    the three. The first rule I wrote checked fur-vs-background and passed
+    every failing case — it was decoration, not a gate.
+
+    The two pairs that actually discriminate:
+
+    1. **mask vs background.** The mask band spans the full head width, so it
+       touches the silhouette edge. When it matches the background the head's
+       outline breaks there and the face detaches.
+    2. **mask vs fur, as a BAND not a floor.** Too little and the marking
+       vanishes; too much and the mask reads as the whole head rather than as
+       a stripe across it. Both failures are 127; the one that works is 62.
+    """
+    if shared.get("species", "human") == "human":
+        return []
+
+    def lum(name: str) -> float:
+        r, g, b = hex_to_rgb(PALETTE[name][0])
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+    fur = shared.get("fur", shared["skin"])
+    bg = shared["background"]
+    mask = shared.get("mask", "black")
+    muzzle = shared.get("muzzle", "white")
+
+    warn = []
+    if abs(lum(mask) - lum(bg)) < 60:
+        warn.append(f"mask '{mask}' vs background '{bg}': the mask touches the "
+                    f"head's outline, so the face will detach from the skull")
+    d = abs(lum(mask) - lum(fur))
+    if d < 35:
+        warn.append(f"mask '{mask}' vs fur '{fur}': too close, the marking "
+                    f"will not read")
+    elif d > 110:
+        warn.append(f"mask '{mask}' vs fur '{fur}': too extreme, the mask will "
+                    f"read as the whole head instead of a band across it")
+    if abs(lum(muzzle) - lum(fur)) < 30:
+        warn.append(f"muzzle '{muzzle}' vs fur '{fur}': too close to read")
+    return warn
+
+
 def build_grid(role: str, cfg: dict, shared: dict) -> list[list[str | None]]:
     """Compose one avatar as a GRID_H x GRID_W map of palette keys."""
     hue = cfg["hue"]
@@ -406,11 +538,18 @@ def build_grid(role: str, cfg: dict, shared: dict) -> list[list[str | None]]:
     # its own material, never a separate black — black outlines are an item-
     # texture convention and look wrong on an entity.
     colours = {
-        "s": (shared["skin"], MID),      "S": (shared["skin"], SHADOW),
-        "m": (shared["skin"], SHADOW),
+        # On a species crew the exposed-body slots are fur, not human skin.
+        "s": (_body(shared), MID),       "S": (_body(shared), SHADOW),
+        "m": (_body(shared), SHADOW),
         "h": (shared["hair"], MID),      "H": (shared["hair"], SHADOW),
         "e": (shared["hair"], SHADOW),   "k": ("black", MID),
         "w": ("white", MID),
+        # species layer: fur uses the SHARED slot so a crew stays one species
+        "f": (shared.get("fur", shared["skin"]), MID),
+        "F": (shared.get("fur", shared["skin"]), SHADOW),
+        "n": (shared.get("muzzle", "white"), MID),
+        "d": (shared.get("mask", "black"), MID),
+        "i": (shared.get("muzzle", "white"), SHADOW),
         "a": (shared["sleeve"], MID),    "A": (shared["sleeve"], SHADOW),
         "t": (hue, HIGHLIGHT),           "T": (hue, MID),
         "c": (hue, HIGHLIGHT),
@@ -421,13 +560,36 @@ def build_grid(role: str, cfg: dict, shared: dict) -> list[list[str | None]]:
 
     grid: list[list[str | None]] = [[None] * GRID_W for _ in range(GRID_H)]
 
-    head = list(HEAD_DEFAULT)
-    for i, row in enumerate(HEADWEAR.get(cfg["headwear"], [])):
-        head[i] = row
-    for r, row in enumerate(head):
-        for c, ch in enumerate(row):
-            if ch != ".":
-                grid[HEAD_TOP + r][HEAD_LEFT + c] = ch
+    species = cfg.get("species", shared.get("species", "human"))
+    sp_head = SPECIES_HEADS.get(species) or []
+
+    if sp_head:
+        # Species heads span the full canvas width (ears sit outside the skull),
+        # so they are placed at column 0, not at HEAD_LEFT.
+        rows = list(sp_head)
+        # 🔴 Hair-type headwear must NOT apply to an animal head — it paints a
+        # helmet over the ears and destroys the silhouette. Only real hats do.
+        hw_name = cfg["headwear"]
+        hat_rows = [] if hw_name in HAIR_HEADWEAR else HEADWEAR.get(hw_name, [])
+        for i, hw in enumerate(hat_rows):
+            if i < len(rows):
+                base = list(rows[i])
+                for c, ch in enumerate(hw):
+                    if ch != ".":
+                        base[HEAD_LEFT + c] = ch
+                rows[i] = "".join(base)
+        for r, row in enumerate(rows):
+            for c, ch in enumerate(row[:GRID_W]):
+                if ch != ".":
+                    grid[HEAD_TOP + r][c] = ch
+    else:
+        head = list(HEAD_DEFAULT)
+        for i, row in enumerate(HEADWEAR.get(cfg["headwear"], [])):
+            head[i] = row
+        for r, row in enumerate(head):
+            for c, ch in enumerate(row):
+                if ch != ".":
+                    grid[HEAD_TOP + r][HEAD_LEFT + c] = ch
 
     for r, row in enumerate(BODY_DEFAULT):
         for c, ch in enumerate(row[:GRID_W]):
@@ -486,10 +648,14 @@ def main() -> int:
                          "Colours only — faces do not survive an 8-texel grid.")
     ap.add_argument("--skin"); ap.add_argument("--hair")
     ap.add_argument("--sleeve"); ap.add_argument("--background")
+    ap.add_argument("--species", help="human (default) or: " + "/".join(
+        k for k in SPECIES_HEADS if k != "human"))
+    ap.add_argument("--fur"); ap.add_argument("--muzzle"); ap.add_argument("--mask")
     ap.add_argument("--list", action="store_true", help="show palette, headwear and props")
     a = ap.parse_args()
 
     if a.list:
+        print("species   :", ", ".join(SPECIES_HEADS))
         print("role hues :", ", ".join(ROLE_HUES))
         print("shared    :", ", ".join(sorted(LOW_CHROMA)))
         print("headwear  :", ", ".join(HEADWEAR))
@@ -510,7 +676,14 @@ def main() -> int:
         print("   Override any slot with --skin/--hair/--sleeve/--background\n")
         shared.update(derived)
 
-    for slot in ("skin", "hair", "sleeve", "background"):
+    if a.species:
+        if a.species not in SPECIES_HEADS:
+            print(f"❌ '{a.species}' is not a species. Options: "
+                  f"{', '.join(SPECIES_HEADS)}")
+            return 1
+        shared["species"] = a.species
+
+    for slot in ("skin", "hair", "sleeve", "background", "fur", "muzzle", "mask"):
         if getattr(a, slot, None):
             val = getattr(a, slot)
             if val not in PALETTE:
@@ -527,6 +700,9 @@ def main() -> int:
         print(f"⚠️  {p}")
 
     a.out.mkdir(parents=True, exist_ok=True)
+    for w in check_species_contrast(shared):
+        print(f"⚠️  {w}")
+
     for role, cfg in roster.items():
         px = render(role, cfg, shared, a.scale)
         path = a.out / f"{role}.png"
