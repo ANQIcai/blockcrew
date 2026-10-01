@@ -533,94 +533,96 @@ Measured: 2 wide × 4 tall, with a large blank cheek area around them. No
 mouth, no outline, no highlight. ⚠️ Most generators spend their detail budget
 evenly; the reference spends it only where the eye actually looks.
 
-### 4. 🔴 The game's constants were baselined on the wrong face
+### 4. 🔴 The game's constants were the wrong renderer's
 
-The vanilla multipliers are top 1.0 / front 0.8 / side 0.6 — baselined on the
-**top** face. But the front plane is the one carrying the face, and at a
-literal 0.8 a warm ivory `#FFFDF5` renders as `#CCCAC4`, a dead grey.
+The 1.0 / 0.8 / 0.6 multipliers are the **block** renderer's. The skin
+renderers people recognise apply none: the texture carries its own shading.
+Rebasing them to 1.25 / 1.0 / 0.75 fixed a dead-grey face, but was still
+solving a problem the real renderers never introduce. The face now sits at
+the ramp's MID on the front, HIGHLIGHT on top, SHADOW on the side — no
+multiplier at all.
 
-Rebasing on the front face — **1.25 / 1.0 / 0.75** — keeps every *ratio*
-identical, so it still reads as three planes of one box, while letting the
-face sit at full brightness.
-
-⚠️ **Copying a constant out of a renderer without asking what it was
-baselined against is how correct numbers produce ugly output.** The number was
-right; the reference frame was wrong.
+⚠️ **Copying a constant out of a renderer without asking which renderer, and
+what it was baselined against, is how correct numbers produce ugly output.**
 
 ---
 
-## 3/4 View Rendering — The Real Game Look
+## Isometric Rendering — The Real Game Look
 
 🔴 **A FLAT SPRITE NEVER LOOKED RIGHT.** Measured: the previous output had
 `AAAAAAAA / BBBBBBBB / CCCCCCCC` rows on the torso — the style guide's
 *banding* artifact, *"pixels lined up brightest to darkest in straight lines,
 reveals the pixel grid, misrepresents the shape."*
 
-The problem was not palette correctness or ramp quality. A vanilla character is
-**six boxes seen at an angle**, and the game shades every face by a fixed
-multiplier decided purely by which way it points:
-
-| face | multiplier |
-|------|------------|
-| top | **1.0** |
-| north / south | **0.8** |
-| east / west | **0.6** |
-| bottom | **0.5** |
-
-⭐ **Those numbers are constants in the game renderer, not artistic choices.**
-Blocks cast no shadows on each other — the sun's position never darkens
-anything — so a face's brightness depends ONLY on its orientation.
+The problem was not palette correctness. A vanilla character is **six boxes
+seen at an angle**, and the renderers people recognise all draw those boxes
+the same way.
 
 ### Real Model Dimensions
 
-The actual texel dimensions of a Minecraft character:
+| part | w × h × d |
+|------|-----------|
+| head | 12 × 12 × 12 — a cube, 12 to fit the measured 12×12 face |
+| overlay | 13 × 13 × 13 — the head inflated 0.5 texel each side |
+| body | 10 × 9 × 6 (bust crop) |
+| arms | 3 × 9 × 6 |
 
-| part | w × h × d | distinct face sizes |
-|------|-----------|---------------------|
-| head | 8 × 8 × 8 | **1** — all six faces identical (the only cube) |
-| body | 8 × 12 × 4 | **3** — 8×12, 4×12, 8×4 |
-| arms | 4 × 12 × 4 | 2 — 4×12, 4×4 |
-| legs | 4 × 12 × 4 | 2 |
+### Isometric Projection — the one the modder renderers use
 
-A bust crops the body at 6 of its 12 rows.
+🔴 **Cabinet oblique was the main defect.** Four iterations kept the front
+face an exact rectangle "to keep the eyes crisp". That is generic pixel art.
+Crafatar, Mineatar and NMSR all use the same three fixed 2×2 matrices (ported
+verbatim from `mineatar-io/skin-render`, `matrix.go`):
 
-### Cabinet Oblique Projection
+```
+side  = rotate(+30°) · skewX(+30°) · scaleY(0.86603)
+front = rotate(−30°) · skewX(−30°) · scaleY(0.86603)
+top   = rotate(+30°) · skewX(−30°) · scaleY(0.86603)
+```
 
-The renderer uses cabinet oblique at 1:2 depth — half a pixel right and up per
-unit of depth. The front face stays an exact rectangle, which keeps the eyes
-and mouth crisp. An isometric view shears the face and at 8 texels wide there
-is no detail left to shear.
+The front face comes out **sheared** — vertical edges stay vertical,
+horizontal edges rise to the right at 1:2. ⭐ The shear is the signature, not
+a cost. The camera looks from above, the front and the character's right, so
+the darker side face is on the viewer's **left**, exactly as in Crafatar.
 
-### Three Faces of One Box = The Look
+Sampling is nearest-neighbour: every output pixel takes exactly one texel
+colour, no blending, no anti-aliasing. Faces are scaled first and transformed
+second, so sloped edges step at one output pixel.
 
-⭐ **Three faces of one box at 1.0 / 0.8 / 0.6 is what the eye recognises.**
-A flat front-facing sprite has exactly one orientation, therefore one tone,
-and reads as generic pixel art no matter how correct the palette is.
+### No Brightness Multipliers
 
-The renderer composes the bust as four boxes (head, torso, two arms), each
-with three visible faces, and applies the vanilla multipliers. The result is a
-3D blocky character with the head's top and side visible, the torso's top and
-side visible, and the arms showing depth.
+The skin renderers apply **no** per-face multipliers — they trust the
+texture. The earlier 1.0 / 0.8 / 0.6 (and the rebased 1.25 / 1.0 / 0.75) were
+the *block* renderer's constants, solving a problem the recognised renderers
+never had. Shading now comes from the hue-shifted ramp per face:
 
-### Depth Testing
+```
+top = HIGHLIGHT    front = MID    side = SHADOW
+```
 
-Boxes are drawn back-to-front with a depth buffer, not relying on draw order.
-A texel is nearer when `z` is smaller, `y` is larger (lower down) and `x` is
-larger. This prevents the head's projected base from overwriting the torso.
+A texel that already carries its own step (an eye, a mouth, a material
+cluster) keeps it on every face, as a painted texture would.
+
+### Second Layer — the Overlay
+
+The head is **two boxes**: the 12×12×12 base plus an overlay cube inflated by
+0.5 texel on every side, transparent wherever there is no headwear. Hats and
+hair are drawn on the overlay, so they sit **proud** of the skull instead of
+being painted flat onto the face. This is the 64×64 skin's "hat" layer, which
+every renderer composites.
+
+### Head Is the Default
+
+`--view head` (default) renders the isometric head with its overlay —
+Crafatar's `/renders/head/` and NMSR's `/head/`, the unit people recognise.
+`--view bust` adds a torso, two arms and the role prop (painted into the
+torso's front texture, so it shears with the face).
 
 ### Ears Are Boxes, Not Texels
 
-🔴 **In a 3D model an ear is a separate cuboid with its own three faces.**
-The flat ear maps, sliced to the 8-wide face, came out as vertical bars in
-the 3/4 view. Species ears are now rendered as boxes offset from the head,
-with their own front/top/side faces shaded by the same multipliers.
-
-### Props on the Torso Front
-
-Props are drawn onto the torso's front face in screen coordinates. Measured:
-the torso front occupies screen rows 10–17, columns 5–12 (8 wide, 8 tall).
-A 2-row prop cannot read at 32px per texel; props are 4 rows on an 8×8
-field, placed at the centre of the chest.
+In a 3D model an ear is a separate cuboid with its own three faces. Species
+ears are rendered as boxes standing on the head's top corners, shaded by the
+same per-face ramp rule.
 
 ### Banding Score Gate
 
