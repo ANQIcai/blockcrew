@@ -1,6 +1,6 @@
 # blockcrew
 
-**Blocky voxel character avatars for a fleet of AI agents — one little person
+**Blocky, pixel, voxel character avatars for a fleet of AI agents — one little person
 per role, built as a matching set.**
 
 An Agent Skill. Point it at your agents, get back a crew that looks like a
